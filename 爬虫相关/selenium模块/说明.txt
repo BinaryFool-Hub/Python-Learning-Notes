@@ -1,0 +1,8 @@
+selenium就是模拟人类操作，但是需要下载对应的内核驱动版本
+
+浏览器内核驱动(大版本号要正确)
+火狐驱动下载地址：https://github.com/mozilla/geckodriver/releases/
+谷歌驱动下载地址：114以上版本：https://googlechromelabs.github.io/chrome-for-testing/
+
+将浏览器驱动放到python文件夹下面就可以不指定位置（不推荐，版本会随时更新）
+将浏览器驱动放到项目文件夹下面，但是需要指定路径（推荐）

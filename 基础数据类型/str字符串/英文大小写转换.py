@@ -12,3 +12,14 @@ print(lowercase_text)  # 输出: hello
 text = "Hello World"
 swapped_text = text.swapcase()
 print(swapped_text)  # 输出: hELLO wORLD
+
+"""标题字体"""
+# 单词首字母大写
+text = "hello world"
+text = text.title()
+print(text)
+
+"""整条句子第一个单词首字母大写"""
+text = "hello world"
+text = text.capitalize()
+print(text)

@@ -31,3 +31,6 @@ s = "字符串"
 # > 字符串居右显示
 # 30 总长度为30
 print("{0:*^30}".format(s))
+print("{:b}".format(10))  # 二进制输出
+print("{:o}".format(10))  # 八进制输出
+print("{:x}".format(10))  # 十六进制输出

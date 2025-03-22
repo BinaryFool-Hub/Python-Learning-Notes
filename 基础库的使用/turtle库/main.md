@@ -69,6 +69,10 @@ window.mainloop()
     - pendown()：放下画笔，移动时绘制。
     - pensize(width)：设置画笔宽度。
     - pencolor(color)：设置画笔颜色。
+- 填充：
+    - color("画笔描边色", "画笔填充色")
+    - begin_fill(): 开始填充
+    - end_fill(): 结束填充
 - 其他：
     - goto(x, y)：移动到指定坐标。
     - circle(radius)：绘制指定半径的圆。

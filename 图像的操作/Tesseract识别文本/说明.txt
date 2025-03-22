@@ -1,0 +1,6 @@
+不适用于识别很多噪点的图片和验证码识别
+常用于识别基本文本图片数据
+如果出现其他语言还需要下载对应的模型识别：https://github.com/tesseract-ocr/tessdata
+下载的模型放在 E:\tesseract\tessdata 目录下
+
+下载的官方版本有问题，可能是网络的屏蔽，在云盘中有可用的tesseract-ocr软件app，下载安装即可

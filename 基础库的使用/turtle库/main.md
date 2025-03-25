@@ -73,9 +73,11 @@ window.mainloop()
     - color("画笔描边色", "画笔填充色")
     - begin_fill(): 开始填充
     - end_fill(): 结束填充
+- 画圆：
+    - circle(radius)：绘制指定半径的圆。
+        - 参数 steps 步长（分几步画完，可以得到多边形）
 - 其他：
     - goto(x, y)：移动到指定坐标。
-    - circle(radius)：绘制指定半径的圆。
     - dot(size, color)：绘制一个点。
     - speed(speed)    设置海龟移动速度（1-10）
     - clear()    清空画布，但不改变海龟位置

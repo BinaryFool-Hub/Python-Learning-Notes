@@ -59,7 +59,7 @@ window.mainloop()
 
 - 移动：
     - forward(distance)，fd(distance)：向前移动指定距离。
-    - backward(distance)：向后移动指定距离。
+    - backward(distance), bk()：向后移动指定距离。
 - 转向：
     - right(angle)：向右转指定角度。
     - left(angle)：向左转指定角度。

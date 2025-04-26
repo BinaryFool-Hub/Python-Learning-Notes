@@ -56,7 +56,9 @@ def indent_parameter():
     indent
     """
     with open('测试1.json', mode='w', encoding='utf-8') as f:  # encoding 是指定编码，utf-8是Linux和Windows通用的编码
-        # 我在下面使用了传入文件对象的操作。ensure_ascii 是取消默认编码，使用我们文件指定的utf-8编码,indent是指定格式化代码和缩进块
+        # 我在下面使用了传入文件对象的操作。
+        # ensure_ascii 是取消中文默认编码，使用我们文件指定的utf-8编码,
+        # indent是指定格式化代码和缩进块
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 

@@ -9,7 +9,7 @@ sheet['A1'] = 'Hello, World!'
 # 通过行列索引写入数据
 sheet.cell(row=2, column=1, value='Python OpenPyXL')
 
-# 写入一行或一列数据，接受列表和元组
+# 写入一行列数据，接受列表和元组
 data = ['Name', 'Age', 'City']
 sheet.append(data)  # 在最后一行追加数据
 

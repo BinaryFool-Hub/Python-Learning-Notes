@@ -5,25 +5,17 @@ Scrapy 是一个用于 Python 的开源网络爬虫框架，专为高效抓取�
 **主要特点**
 
 1. 高效性：基于异步处理，能快速抓取大量数据。
-
 2. 可扩展性：支持自定义中间件、管道和扩展，适应不同需求。
-
 3. 内置功能：自动处理请求、响应、数据提取和存储。
-
 4. 支持多种数据格式：可导出 JSON、CSV、XML 等格式。
-
 5. 强大的选择器：支持 XPath 和 CSS 选择器，便于数据提取。
 
 **核心组件**
 
 1. Spider：定义抓取逻辑和数据提取规则。
-
 2. Item：存储抓取数据的容器。
-
 3. Pipeline：处理抓取的数据，如清洗、验证和存储。
-
 4. Downloader：负责下载网页内容。
-
 5. Scheduler：管理请求队列，决定抓取顺序。
 
 # 官方文档
@@ -34,58 +26,45 @@ scrapy中文文档：https://www.osgeo.cn/scrapy/intro/overview.html
 
 # 环境搭建（不指定版本不兼容）
 
-```
+```shell
+# scrapy框架
 pip install scrapy==2.9.0
+
+# scrapy的依赖
 pip install Twisted==22.10.0
 ```
 
-# 01 创建项目
+# 编写爬虫项目
 
-```
-scrapy startproject (项目名字<独一无二>)
-```
+## 01 创建项目
 
-# 02 切换目录
+1. 创建一个爬虫项目
+   ```shell
+   scrapy startproject +(项目名字<独一无二>)
+   ```
+2. cd 切换到爬虫项目目录
+   ```shell
+   cd 项目名称路径
+   ```
+3. 创建爬虫文件
+    - 域名限制可以随便填写，在实际开发过程中不会用到域名限制
+   ```shell
+      scrapy genspider (+爬虫文件的名字<独一无二的>) (+域名限制)
+   ```
 
-```
-cd (爬虫项目目录,这样才可以运行和创建新的爬虫文件)
-```
+## 02 进一步初始化设置
 
-# 03 创建爬虫文件
+1. 在 settings.py 文件中关闭robots协议
+2. 在爬虫文件下修改起始网址<start_urls>
+3. 注释限制允许的域 allowed_domains = \["example.com"] 这样不会限制爬取的网址
+4. 在 parse 方法下面解析数据
+5. 在 items.py 文件中定义数据结构
+6. 在 pipelines.py 文件中写保存数据的逻辑
+7. 在 settings.py 配置文件中打开管道配置
 
-```
-scrapy genspider (爬虫文件的名字<独一无二的>) (域名限制)
-```
+## 03 项目运行
 
-# 04 初始化设置(可选)
-
-## 001
-
-在 settings.py 文件中关闭robots协议
-
-## 002
-
-在爬虫文件下修改起始网址<start_urls>
-
-## 003
-
-注释限制允许的域 allowed_domains = ["baidu.com"] 这样不会限制爬取的网址
-
-## 004
-
-在parse函数中编写完成你的爬虫代码后，数据在 items.py 文件中定义数据结构
-
-## 005
-
-在 pipelines.py 文件中写保存数据的逻辑
-
-## 006
-
-在 settings.py 配置文件中打开管道配置
-
-# 运行
-
-```
+```shell
 scrapy crawl (爬虫文件名字)   运行的时候一定要先切换终端路径到项目目录
 scrapy crawl (爬虫文件名字)  --nolog  无日志输出运行，但是会输出print
 ```

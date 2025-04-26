@@ -3,7 +3,7 @@ import parsel
 
 """
 get是获取第一个数据，getall是获取所有数据返回为列表
-下面选择方式都可以嵌套使用，有返回值，记得输出
+下面选择方式都可以嵌套使用，有返回值，记得赋值输出
 """
 
 html = """
@@ -31,6 +31,7 @@ selector.xpath('/html/body/h1').getall()  # 一层一层选择，根元素是htm
 
 # 跨节点选择
 # //
+# 会找到所有的ul，确保是唯一或你需要的数据
 selector.xpath('//ul//a').getall()
 
 # 二次选择
@@ -41,7 +42,7 @@ result.xpath('./li').getall()  # 再选择li
 # 父节点选择
 # ..
 result1 = selector.xpath('//a')  # 先选择a
-result1.xpath('..').getall()  # 再选择a的父级元素
+result1.xpath('..').getall()  # 再选择a的父级单元素
 
 # 属性选择
 # [@href="https://www.baidu.com"]

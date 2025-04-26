@@ -1,7 +1,9 @@
 import time
 from selenium.webdriver import Chrome  # 导入需要操作的浏览器对象
+from selenium.webdriver.support.ui import WebDriverWait  # 显示等待元素对象
 from selenium.webdriver.chrome.service import Service  # 导入浏览器内核驱动服务
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 
 """
 注意: 真实的浏览器渲染出来的数据, 和使用selenium得到的渲染数据可能不会一样<数据, 标签结构>
@@ -20,6 +22,13 @@ driver.implicitly_wait(10)  # 在一个py中只需要设置一次, 其他页面�
 
 # 访问页面操作
 driver.get('https://www.baidu.com/')
+
+# 显示等待的对象: 如果超过设置的时间 数据没有返回 直接报错
+wait = WebDriverWait(driver, 10)
+
+# 显示等待元素出现 设置等待的条件，如果超过设置的时间 数据没有返回 直接报错
+wait.until(EC.presence_of_element_located((By.ID, 'su')))
+print('网页已经加载完了')
 
 # 截图操作
 # 整个浏览器截图

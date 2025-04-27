@@ -47,7 +47,7 @@ pip install Twisted==22.10.0
    cd 项目名称路径
    ```
 3. 创建爬虫文件
-    - 域名限制可以随便填写，在实际开发过程中不会用到域名限制
+    - 域名限制可以随便填写(a.com)，在实际开发过程中不会用到域名限制
    ```shell
       scrapy genspider (+爬虫文件的名字<独一无二的>) (+域名限制)
    ```
@@ -65,8 +65,11 @@ pip install Twisted==22.10.0
 ## 03 项目运行
 
 ```shell
-scrapy crawl (爬虫文件名字)   运行的时候一定要先切换终端路径到项目目录
-scrapy crawl (爬虫文件名字)  --nolog  无日志输出运行，但是会输出print
+# 运行的时候一定要先切换终端路径到项目目录
+scrapy crawl (爬虫文件名字)
+
+# 无日志输出运行，但是会输出print
+scrapy crawl (爬虫文件名字)  --nolog
 ```
 
 # 扩展

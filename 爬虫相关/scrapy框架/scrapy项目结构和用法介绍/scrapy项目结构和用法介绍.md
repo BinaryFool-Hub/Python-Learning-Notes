@@ -338,11 +338,13 @@ class Spider6Spider(scrapy.Spider):
         print("拿到了数据：", response.text)
 ``` 
 
-# 请求头的添加
+# headers、cookies、proxy
+
+## 请求头的添加
 
 **scrapy框架默认会自带一些请求头的常用字段**
 
-## 方式一，直接在请求体中添加
+### 方式一，直接在请求体中添加
 
 直接在请求体中添加是一次性的，下一次请求还需要重新添加，这很麻烦，不推荐
 
@@ -370,11 +372,11 @@ class Spider1Spider(scrapy.Spider):
         pass
 ```
 
-## 方式二，使用中间件
+### 方式二，使用中间件
 
 如果需要开启管道来应用到scrapy项目上
 
-### 编写中间件
+#### 编写中间件
 
 在`middlewares.py`文件中编写你的请求头中间件即可，其余的不要管
 
@@ -397,17 +399,17 @@ class HeadersMiddleware:
         return None  # 注意要返回 None，不然 Scrapy不会继续处理请求
 ```
 
-### 开启注册中间件
+#### 开启注册中间件
 
 ![](images/PixPin_2025-04-27_15-59-39.png)
 
-## 方式三，在`settings.py`文件中设置
+### 方式三，在`settings.py`文件中设置
 
 **该方法也是全局配置的**
 
 ![](images/PixPin_2025-04-27_16-06-41.png)
 
-## 请求头设置方法优先级和更新关系
+### 请求头设置方法优先级和更新关系
 
 他们并不是项目排斥的，是互存的
 
@@ -451,13 +453,13 @@ class HeadersMiddleware:
       }
       ```
 
-# cookies添加
+## cookies添加
 
 settings.py （通常默认没有 cookies 设置）
 
-## 方式一，使用中间件
+### 方式一，使用中间件
 
-### 编写中间件
+#### 编写中间件
 
 在`middlewares.py`文件中编写你的cookie中间件即可，其余的不要管
 
@@ -478,11 +480,11 @@ class CookiesMiddleware:
         return None  # 注意要返回 None，不然 Scrapy不会继续处理请求
 ```
 
-### 开启注册中间件
+#### 开启注册中间件
 
 ![](images/PixPin_2025-04-27_16-46-45.png)
 
-## 方式二，在请求体中
+### 方式二，在请求体中
 
 ```python
 import scrapy
@@ -505,19 +507,19 @@ class Spider3Spider(scrapy.Spider):
         pass
 ```
 
-## cookies设置方法优先级和更新关系
+### cookies设置方法优先级和更新关系
 
 上面的两种cookie设置方法都是共存的
 
 和headers请求头的更新方法和优先级一样的，只不过`settings.py`没有默认的cookies
 
-# 代理添加
+## 代理添加
 
 除了下面写到的中间件代理，也可以在请求体中更改当次请求的代理，但是是一次性的    
 只对当前这个请求生效，下一个请求不自动继承！    
 更改参数里面的`meta\['proxy']`即可
 
-## 编写中间件
+### 编写中间件
 
 ```python
 class ProxyMiddleware:
@@ -532,7 +534,7 @@ class ProxyMiddleware:
         return None  # 注意要返回 None，不然 Scrapy不会继续处理请求
 ```
 
-## 开启注册代理
+### 开启注册代理
 
 **权重可以和headers，cookies一样，但是因为是代理，建议设置权重值更低一点**
 

@@ -142,40 +142,220 @@ class Spider2Spider(scrapy.Spider):
               yield Spider3Item(text=text, author=author, tags=tags)
   ```
 
+## 方式三，使用字段容器返回多个不同数据
+
+当遇到数据处理保存需要返回3个字段，但是已经使用yield返回了2个字段，两个都需要的时候可以考虑使用多个字段容器，然后逐一返回
+
+1. 在`items.py`定义字段容器类
+
+    ```python
+    import scrapy
+    
+    
+    class CustomizeItem(scrapy.Item):
+        name = scrapy.Field()
+        age = scrapy.Field()
+    ```
+
+2. 在爬虫文件中逐一返回给item
+
+    ```python
+    import scrapy
+    
+    from ..items import CustomizeItem, CustomizeItem1
+    
+    
+    class Spider1Spider(scrapy.Spider):
+        name = "spider_1"
+        allowed_domains = ["a.com"]
+        start_urls = ["https://a.com"]
+    
+        def parse(self, response):
+            """
+            这里编写数据提取操作,然后赋值给参数
+            """
+            name = "小明"
+            age = 19
+            note = "不吃香菜"
+    
+            """先返回给一个容器，因为是异步操作，同一个数据先到这里返回"""
+            yield CustomizeItem(
+                name=name,
+                age=age
+            )
+    
+            """返回给第二个容器, 因为是异步操作，同一个数据先到上面返回，再经过这里返回"""
+            yield CustomizeItem1(
+                name=name,
+                age=age,
+                note=note
+            )
+    ```
+3. 在管道里面判断是哪个容器返回的数据
+   写在`数据流入管道保存pipelines.py`一级标题下面的`判断是哪个items来的数据`二级标题
+
 # 数据流入管道保存`pipelines.py`
 
 需要开启管道才可以处理数据的保存
 
 ## 开启管道
 
-在`settings.py`文件中取消注释即可开启管道     
-管道字典里面的键后面跟着一个数字叫权重，值越小表示权重越高，执行的优先级就越高
+- 在`settings.py`文件中取消注释即可开启管道，如果需要开启多条管道在`pipelines.py`文件下编写对应的类然后在注册过去即可
+- 多条管道的作用：当需要保存不同数据类型的数据，比如json，excel，可以利用不同的管道处理不同的数据，还可用进行另一步骤的数据处理
+- 管道字典里面的键后面跟着一个数字叫权重，值越小表示权重越高，执行的优先级就越高，如果你有多条管道则也需要一并添加进去
+- 如果你在 Scrapy 中有多个数据管道，且它们的权重（数字）相同，它们都会被执行，但执行的顺序是不确定的。
+    - 数据管道同权重会导致内存一时间过多，建议上下浮动3个值
+    - 避免依赖执行顺序：如果一个管道的输出是另一个管道的输入，最好给它们设置不同的权重。
 
 ![](images/PixPin_2025-04-27_11-38-28.png)
 
 ## 管道文件说明
 
+- 写在`pipelines.py`文件里面，可以自定义类名称，开始构建项目会给你一个默认的，可以选择删除，自己构建自己需要的管道需求
+- 可以在该文件中写多个不同需求的数据管道类，应对不同需求的数据处理，但是注意的是都需要注册管道配置中`settings.py`,不然无法生效
+- init,open_spider两个初始化函数的区别
+    - \_\_init__ 是类的构造函数，负责对象实例的初始化，通常只调用一次。
+    - open_spider(self, spider) 是在爬虫启动时调用的，专门用于爬虫级别的初始化。
+    - 在实际开发中很少使用到__init__，一般常用框架自带有的
+
 ```python
-# Define your item pipelines here
-#
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+class CustomizePipeline(object):
+    def __init__(self):
+        """这是类的构造函数，负责对象实例的初始化，通常只调用一次。"""
+        """
+        该函数和open_spider效果类似，但是人家框架有就推荐使用人家框架的，一般不使用这个，注释忽略即可
+        """
 
+    def open_spider(self, spider):
+        """不能更改的方法名和参数"""
+        """
+        是在爬虫启动时调用的，专门用于爬虫级别的初始化。
+        框架项目的初始化方法，每次项目启动的时候只会执行一次，一般用于打开文件或数据库连接
+        """
 
-# useful for handling different item types with a single interface
-from itemadapter import ItemAdapter
-
-
-class Project1Pipeline:
     def process_item(self, item, spider):
+        """不能更改的方法名和参数"""
+        """框架的数据流处理方法，每次数据一从item流入就会调用该方法，用于数据处理"""
         """
         流入的数据会用item接收，字典形式，需要保存数据提取就使用字典的方式提取数据
-
+    
         return item 不能注释或者删除，因为Scrapy 的 pipeline 是一个链式处理机制，
         如果你在某个 process_item 方法里不 return item，这个 item 就不会继续传给后面的 pipeline 或内置组件了。
         如果漏了 return item，后续的 pipeline 根本拿不到数据
         """
+
         return item
+
+    def close_spider(self, spider):
+        """不能更改的方法名和参数"""
+        """框架项目的结束调用方法，在整个项目结束前会调用该方法函数，和open_spider函数配套"""
+```
+
+## 判断是哪个items来的数据
+
+在管道文件中的类中的`process_item`函数里面判断，如果是这个类型则使用什么代码，不是又干什么
+
+```python
+from .items import CustomizeItem, CustomizeItem1  # 需要导入类用于判断是哪个类类型
+
+
+class TypeJudge(object):
+    def process_item(self, item, spider):
+        """
+        使用isinstance()函数来判断是不是正确的类型
+        -- 参数一，数据
+        -- 参数二，数据类型（基本数据类型，也可以是类的类型）
+        """
+
+        print("传递过来的类型：", type(item))
+
+        if isinstance(item, CustomizeItem):
+            print("需要执行的代码")
+        elif isinstance(item, CustomizeItem1):
+            print("又需要执行的代码")
+        else:
+            print("都不是，则可以不进行或还要进行其他操作")
+            # 如果都不是想要不继续处理则需要记得在这块写  return item
+
+        return item
+```
+
+## 内置管道
+
+提供给开发者使用的，这样更方便开发者注重逻辑问题即可
+
+### ImagesPipeline管道，处理图片的
+
+- 虽然父级已经写好了如何使用，但是实际开发可能需要自定义一些东西，所以这里用的是继承编写
+- 在设置中指定输出的文件堆路径，保存的数据就都在这个项目父级下的指定文件名中
+  ```python
+  IMAGES_STORE = 'downloaded_images'  # 图片保存到这个目录
+  ``` 
+- 记得开启管道
+
+```python
+import scrapy
+from scrapy.pipelines.images import ImagesPipeline  # 专门用于保存图片的类
+
+
+class SaveImagesPipeline(ImagesPipeline):
+    def get_media_requests(self, item, info):
+        """
+        固定的格式，不能改变
+        往下编写你的请求即可，会自动处理你请求下载的图片
+        """
+        for url in item['urls']:  # 如果你传入的是一个列表可以这样编写，如果是一个就单独写就行
+            yield scrapy.Request(  # 和在爬虫文件`start_requests`函数中请求方法一样写的，post就post，但是一般图片都是get
+                # 参数如果有headers和cookies等也可以传入
+                url=url,
+                meta={'title': item['title']}  # 用于传入到下一个函数使用
+            )
+
+    def file_path(self, request, response=None, info=None, *, item=None):
+        """
+        指定文件保存的路径, 重命名，若不重写这函数，图片名为哈希
+        :return: 文件路径
+        """
+        dir_name = request.meta.get('title')  # `get_media_requests`函数使用请求体中的meta参数传递下来的
+
+        return dir_name  # return返回的结果就是 目录 + 文件名
+```
+
+### FilesPipeline管道，处理二进制文件的
+
+- 虽然父级已经写好了如何使用，但是实际开发可能需要自定义一些东西，所以这里用的是继承编写，它和ImagesPipeline管道很像
+- 在设置中指定输出的文件堆路径，保存的数据就都在这个项目父级下的指定文件名中
+  ```python
+  FILES_STORE = 'downloaded_files'  # 保存二进制文件的目录
+  ``` 
+- 记得开启管道
+
+```python
+import scrapy
+from scrapy.pipelines.files import FilesPipeline  # 专门用于保存二进制文件的类
+
+
+class SaveFilesPipeline(FilesPipeline):
+    def get_media_requests(self, item, info):
+        """
+        固定的格式，不能改变
+        往下编写你的请求即可，会自动处理你请求下载的图片
+        """
+        for url in item["urls"]:  # 如果你传入的是一个列表可以这样编写，如果是一个就单独写就行
+            yield scrapy.Request(  # 和在爬虫文件`start_requests`函数中请求方法一样写的
+                # 参数如果有headers和cookies等也可以传入
+                url=url,
+                meta={'title': item['title']}  # 用于传入到下一个函数使用
+            )
+
+    def file_path(self, request, response=None, info=None, *, item=None):
+        """
+        指定文件保存的路径, 重命名，若不重写这函数，图片名为哈希
+        :return: 文件路径
+        """
+        dir_name = request.meta.get('title')
+
+        return dir_name  # 返回完整保存路径
 ```
 
 # 自定义请求

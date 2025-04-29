@@ -155,6 +155,12 @@ class Spider2Spider(scrapy.Spider):
     class CustomizeItem(scrapy.Item):
         name = scrapy.Field()
         age = scrapy.Field()
+    
+    
+    class CustomizeItem1(scrapy.Item):
+        name = scrapy.Field()
+        age = scrapy.Field()
+        note = scrapy.Field()
     ```
 
 2. 在爬虫文件中逐一返回给item

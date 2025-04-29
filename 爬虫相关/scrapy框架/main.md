@@ -34,9 +34,9 @@ pip install scrapy==2.9.0
 pip install Twisted==22.10.0
 ```
 
-# 编写运行爬虫项目
+# 创建运行爬虫项目
 
-## 01 创建项目
+## 创建项目
 
 1. 创建一个爬虫项目
    ```shell
@@ -52,17 +52,7 @@ pip install Twisted==22.10.0
       scrapy genspider (+爬虫文件的名字<独一无二的>) (+域名限制)
    ```
 
-## 02 进一步初始化设置
-
-1. 在 settings.py 文件中关闭robots协议
-2. 在爬虫文件下修改起始网址<start_urls>
-3. 注释限制允许的域 allowed_domains = \["example.com"] 这样不会限制爬取的网址
-4. 在 parse 方法下面解析数据
-5. 在 items.py 文件中定义数据结构
-6. 在 pipelines.py 文件中写保存数据的逻辑
-7. 在 settings.py 配置文件中打开管道配置
-
-## 03 项目运行
+## 项目运行
 
 ### 使用终端
 

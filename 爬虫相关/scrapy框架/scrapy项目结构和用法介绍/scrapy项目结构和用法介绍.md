@@ -53,14 +53,24 @@ class Spider1Spider(scrapy.Spider):
         pass
 ```
 
-# 关闭robots协议
+# 项目进一步初始化
+
+## 关闭robots协议
 
 robots协议又称君子协议
 
 robots协议就是网站文件写了声明不能爬取或不推荐爬取，如果不关闭scrapy程序会自动跳过不能爬取的数据，这样大大的限制了开发者的操作空间，所以关闭就不会造成数据获取不全的情况
 
 在项目的`settings.py`文件中找到行改为`False`即可
+
 ![](images/PixPin_2025-04-27_10-55-01.png)
+
+## 注释限制域、更改请求网址
+
+1. 在爬虫文件下修改起始网址<start_urls>
+2. 注释限制允许的域 allowed_domains = \["example.com"] 这样不会限制爬取的网址
+
+![](images/PixPin_2025-04-29_15-12-19.png)
 
 # 爬虫文件函数`parse`数据处理完成返回
 

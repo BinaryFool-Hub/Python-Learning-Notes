@@ -17,5 +17,5 @@ md5_obj.update(byte_data)
 # 通过 hexdigest 方法获取最终的 MD5 摘要，并以十六进制字符串的形式返回。
 print(md5_obj.hexdigest())
 
-# 一步到位
-print(hashlib.md5(json.dumps(d1).encode('utf-8')).hexdigest())
+"""上述步骤一步到位"""
+print(hashlib.md5(json.dumps(d1, sort_keys=True).encode('utf-8')).hexdigest())

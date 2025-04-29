@@ -1,4 +1,5 @@
 import scrapy
+from scrapy.http import HtmlResponse
 
 
 class Spider2Spider(scrapy.Spider):
@@ -8,5 +9,6 @@ class Spider2Spider(scrapy.Spider):
 
     # start_urls = ["https://example.com"]
 
-    def parse(self, response):
+    def parse(self, response: HtmlResponse):
+        print(response)
         pass

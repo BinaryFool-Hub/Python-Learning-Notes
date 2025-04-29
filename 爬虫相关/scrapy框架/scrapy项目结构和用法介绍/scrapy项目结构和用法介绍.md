@@ -338,7 +338,7 @@ class SaveImagesPipeline(ImagesPipeline):
         """
         dir_name = request.meta.get('title')  # `get_media_requests`函数使用请求体中的meta参数传递下来的
 
-        return dir_name  # return返回的结果就是 目录 + 文件名
+        return dir_name + '.jpg' # return返回的结果就是 目录 + 文件名
 ```
 
 ### FilesPipeline管道，处理二进制文件的
@@ -375,7 +375,7 @@ class SaveFilesPipeline(FilesPipeline):
         """
         dir_name = request.meta.get('title')
 
-        return dir_name  # 返回完整保存路径
+        return dir_name + '.mp3'  # 返回完整保存路径
 ```
 
 # 自定义请求

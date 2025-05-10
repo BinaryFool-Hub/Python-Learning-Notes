@@ -689,7 +689,9 @@ class HeadersMiddleware:
 
 ## cookies添加
 
-settings.py （通常默认没有 cookies 设置）
+settings.py （通常默认没有 cookies 设置）只有放在请求头中，
+但是需要在`settings.py`文件加上一个参数`COOKIES_ENABLED = False`才会识别headers里面的cookies键,
+但是这个做法是不被推荐的，因为会和其他cookies(中间件、请求体)冲突，导致cookies不能够正确传递
 
 ### 方式一，使用中间件
 

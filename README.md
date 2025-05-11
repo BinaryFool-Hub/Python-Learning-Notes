@@ -10,7 +10,8 @@
 # 环境
 
 **编辑器：PyCharm 2024.1.4 (Professional Edition)**     
-**解释器：Python 3.10.11**
+**解释器：Python 3.10.11**      
+**node: 21.7.3**
 
 # 阅读详情
 

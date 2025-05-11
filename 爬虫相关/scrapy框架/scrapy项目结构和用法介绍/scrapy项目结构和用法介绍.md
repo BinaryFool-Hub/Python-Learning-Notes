@@ -805,3 +805,22 @@ RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]  # 重试的状态�
 # 单位：秒
 DOWNLOAD_DELAY = 2
 ```
+
+## 日志级别
+
+日志级别为WARNING
+
+- 你将看到：
+    - 所有 WARNING
+    - 所有 ERROR
+    - 所有 CRITICAL
+- 不会看到：
+    - DEBUG
+    - INFO
+
+```python
+LOG_LEVEL = 'WARNING'  # 线上运行推荐用 WARNING 或更高
+LOG_ENABLED = True  # 日志启用
+LOG_FILE = 'log/spider_1.log'  # 指定日志文件路径(相对于项目的路径)
+LOG_STDOUT = True  # 将标准输出重定向到日志
+```

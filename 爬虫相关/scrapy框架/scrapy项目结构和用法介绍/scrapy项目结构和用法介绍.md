@@ -824,3 +824,13 @@ LOG_ENABLED = True  # 日志启用
 LOG_FILE = 'log/spider_1.log'  # 指定日志文件路径(相对于项目的路径)
 LOG_STDOUT = True  # 将标准输出重定向到日志
 ```
+
+## 控制并发请求数量的关键配置
+
+| 配置项                            | 	默认值   | 说明                               |
+|--------------------------------|--------|----------------------------------|
+| CONCURRENT_REQUESTS            | 16     | Scrapy 全局最多并发请求数（整个引擎）           |
+| CONCURRENT_REQUESTS_PER_DOMAIN | 8      | 每个目标网站最大并发请求数                    |
+| CONCURRENT_REQUESTS_PER_IP     | 0（禁用）	 | 每个 IP 最大并发（设置这个会覆盖上面 per domain） |
+| DOWNLOAD_DELAY                 | 0      | 请求之间的延迟（秒），用于防止请求过快              |
+| AUTOTHROTTLE_ENABLED           | False  | 是否启用自适应限速机制                      |

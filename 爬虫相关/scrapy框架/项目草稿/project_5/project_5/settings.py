@@ -105,7 +105,7 @@ ITEM_PIPELINES = {
     'scrapy_redis.pipelines.RedisPipeline': 400,
 }
 
-LOG_LEVEL = 'DEBUG'
+# LOG_LEVEL = 'DEBUG'
 
 # Introduce an artifical delay to make use of parallelism. to speed up the
 # crawl.
@@ -121,3 +121,7 @@ REDIS_PARAMS = {
 }
 REDIS_START_URLS_KEY = 'spider_1:start_urls'
 
+LOG_LEVEL = 'WARNING'  # 线上运行推荐用 WARNING 或更高
+LOG_ENABLED = True
+LOG_FILE = 'spider_1.log'  # 指定日志文件路径
+LOG_STDOUT = True  # 将标准输出重定向到日志

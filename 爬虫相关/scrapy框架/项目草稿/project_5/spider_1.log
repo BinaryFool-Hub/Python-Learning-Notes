@@ -1,0 +1,16 @@
+2025-05-11 14:35:35 [spider_1] WARNING: [93mWARNING: String request is deprecated, please use JSON data format. Detail information, please check https://github.com/rmax/scrapy-redis#features[0m
+2025-05-11 14:40:35 [spider_1] WARNING: [93mWARNING: String request is deprecated, please use JSON data format. Detail information, please check https://github.com/rmax/scrapy-redis#features[0m
+2025-05-11 14:40:35 [scrapy.core.scraper] ERROR: Error downloading <GET ttp://quotes.toscrape.com/page/3/>
+Traceback (most recent call last):
+  File "E:\Python310\lib\site-packages\twisted\internet\defer.py", line 1693, in _inlineCallbacks
+    result = context.run(
+  File "E:\Python310\lib\site-packages\twisted\python\failure.py", line 518, in throwExceptionIntoGenerator
+    return g.throw(self.type, self.value, self.tb)
+  File "E:\Python310\lib\site-packages\scrapy\core\downloader\middleware.py", line 54, in process_request
+    return (yield download_func(request=request, spider=spider))
+  File "E:\Python310\lib\site-packages\scrapy\utils\defer.py", line 74, in mustbe_deferred
+    result = f(*args, **kw)
+  File "E:\Python310\lib\site-packages\scrapy\core\downloader\handlers\__init__.py", line 83, in download_request
+    raise NotSupported(
+scrapy.exceptions.NotSupported: Unsupported URL scheme 'ttp': no handler available for that scheme
+2025-05-11 15:02:51 [spider_1] WARNING: [93mWARNING: String request is deprecated, please use JSON data format. Detail information, please check https://github.com/rmax/scrapy-redis#features[0m

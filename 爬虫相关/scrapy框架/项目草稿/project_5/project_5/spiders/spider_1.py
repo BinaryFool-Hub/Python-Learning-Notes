@@ -19,5 +19,5 @@ class Spider1Spider(RedisSpider):
         born_date = response.css('.author-born-date::text').get()
         born_location = response.css('.author-born-location::text').get()
 
-        item = Project5Item(born_location=born_location, born_date=born_date)
+        item = Project5Item(born_location='中文', born_date='中文测试')
         yield item

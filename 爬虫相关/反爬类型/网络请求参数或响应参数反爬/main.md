@@ -55,6 +55,8 @@ print(md5_obj)
 
 ### 使用python认识des加密过程
 
+加密的结果是二进制，如果需要可用使用进制转换为16进制等其他方式
+
 ```shell
 pip install pycryptodomex
 ```
@@ -97,5 +99,46 @@ print(result)
 
 ![](images/PixPin_2025-05-18_17-44-27.png)
 
+## AES
 
+### 使用python认识AES加密过程
+
+加密的结果是二进制，如果需要可用使用进制转换为16进制等其他方式
+
+```shell
+pip install pycryptodomex
+```
+
+```python
+from Cryptodome.Cipher import AES
+from Cryptodome import Random  # 随机数据
+
+# 密钥的长度可以使用 <16> 128位、192位或256位。密钥的长度不同，推荐加密轮数也不同
+key = b'this is a 16 key'
+
+# 随机生成一个iv --> 盐: 在加密解密的过程中加料
+# AES.block_size --> 生成长度等于AES块大小的不可重复的密钥向量, 随机的
+iv = Random.new().read(AES.block_size)
+
+data = '待加密数据'
+
+# AES加密对象，加密模式可用自由选择，用什么加密就用什么解密
+aes = AES.new(key, AES.MODE_CFB, iv)
+
+# 进行加密，接收的需要是二进制数据，所以使用encode()转码
+encrypt_data = aes.encrypt(data.encode())
+print(encrypt_data)
+
+# 解密
+aes = AES.new(key, AES.MODE_CFB, iv)
+decrypt_data = aes.decrypt(encrypt_data)
+print(decrypt_data)
+print(decrypt_data.decode())  # 因为加密进行了转码，所以这里进行解码才能看到真实数据
+```
+
+### 加密场景
+
+如果想要扣取AES加密会有很多代码，他是在`CryptoJS`的js模块库里面的，只需要下载对应的js库然后导入然后修改必要的代码即可，也可以使用python模拟加密
+
+![](images/PixPin_2025-05-19_17-14-58.png)
 

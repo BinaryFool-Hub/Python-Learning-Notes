@@ -36,6 +36,7 @@ with open('js_code.js', mode='r', encoding='utf-8') as f:
 js_obj = execjs.compile(js_code)  # 编译js，括号内部传js的语法
 
 result = js_obj.call('fun', '参数1', '参数二')  # 调用js方法，js_obj表示编译好的js对象，call方法内部传js中需要调用的函数，和调用函数所需参数(不定长参数)。
+# result = js_obj.eval('a')  # 调用返回里面的变量值
 print(result)  # 输出执行的结果
 ```
 

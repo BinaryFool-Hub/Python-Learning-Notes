@@ -1,0 +1,33 @@
+* {
+    padding: 0;
+    margin: 0;
+}
+
+li {
+    list-style-type: none;
+}
+
+h1 {
+    margin: 20px 0;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+#result {
+    border: solid 1px black;
+    margin: 20px 0;
+    padding: 20px;
+
+    /*文本复制，默认无法复制选中*/
+    user-select: text;
+    -webkit-user-select: text; /*兼容性*/
+}
+
+#result:hover {
+    cursor: text;
+}

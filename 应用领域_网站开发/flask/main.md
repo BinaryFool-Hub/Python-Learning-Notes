@@ -444,6 +444,7 @@ response = make_response('删除cookie')
 """删除操作肯定是在浏览器完成的，所以我们重置下cookie名称的对应有效时间为0即可。"""
 # 设置 max_age=0 会让浏览器立刻删除 Cookie，而此时即使 expires 被设置成未来的时间，也会被忽略，以 max_age 为准，设置清除只需要设置一个即可，不需要两个都写
 response.set_cookie('username', '', max_age=0)
+response.delete_cookie('username')  # 和上面的等效，只不过底层实现方法有略微区别，推荐使用这个
 
 # return response  # 返回到客户端即可
 ```
@@ -480,12 +481,14 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # 控制持久化 
 @app.route('/')
 def index():
     """
+    session.permanent = True 持久化 不能写在全局，不然无效，session 是 请求上下文（request context） 绑定的，每次请求都会重新初始化。
+    
     如果不设置session.permanent = True  # 启用持久化
     只在当前浏览器会话中有效
     关闭浏览器就会失效（浏览器自动清除）
     PERMANENT_SESSION_LIFETIME 设置 不会生效
     """
-    session.permanent = True  # 启用持久化,
+    session.permanent = True  # 启用持久化
     session['user'] = 'BinaryFool'
     return 'Logged in'
 ```

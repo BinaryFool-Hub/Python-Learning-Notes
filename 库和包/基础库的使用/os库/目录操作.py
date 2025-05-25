@@ -23,8 +23,11 @@ def mkdir_method():
 
     name = '文件夹名字'
 
-    # 创建文件夹，如果只传入文件名则创建的是在当前目录，文件夹存在报错
+    # 创建文件夹，只能建一层，文件夹存在报错
     os.mkdir(name)
+
+    # 创建文件夹，支持多层，使用exist_ok=True文件夹即使存在也不会报错
+    os.makedirs(name + "/二层文件夹", exist_ok=True)
 
 
 def chdir_method():

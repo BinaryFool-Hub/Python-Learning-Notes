@@ -506,8 +506,8 @@ session['age'] = 19
 
 # 单个键多个键值对
 session['info'] = {
-  'username': 'BinaryFool',
-  'age': '19'
+    'username': 'BinaryFool',
+    'age': '19'
 }
 
 # return 'ok' # 不需要返回session，会自动处理
@@ -535,8 +535,298 @@ session.pop("username")  # 删除指定的key值
 session.clear()  # 清除所有 session 项，不需要返回给前端，会自动处理
 ```
 
-# 全局钩子
+# 请求全局钩子
+
+- flask 的“钩子（Hook）”是一种 在请求处理过程的不同阶段插入自定义逻辑 的机制，主要用于做一些全局性的处理，比如：
+    - 请求前做权限检查或参数校验
+    - 请求后统一格式化响应
+    - 记录日志、统计耗时
+    - 打开和关闭数据库连接等
+- Flask 中常用的钩子有三种(本来有四种，但是结合开发习惯等因素删除了before_first_request)：
+    - @app.before_request：在每一个请求之前自动调用（视图函数执行之前）
+    - @app.after_request：在每一个请求之后自动调用（视图函数执行之后，响应返回之前）
+    - @app.teardown_request：请求处理完后自动调用（无论是否发生异常）
+- 可以把 Flask 的钩子（Hook）理解为一种“轻量级的中间件机制”，不过它和真正的“中间件”还是有一些区别的
+- Flask 的钩子是实现中间件功能的方式之一，但不如传统中间件机制灵活和通用。
+
+## before_request
+
+每次客户端访问，视图执行之前，都会自动执行被 @app.before_request 所装饰的函数
+
+常用于每次视图访问之前的公共逻辑代码的运行\[身份认证，权限判断，请求日志]
+
+在每一个请求之前自动调用（视图函数执行之前）
+
+### 方案一(推荐)
+
+直接使用装饰器注册
 
 ```python
-# 待完成
+"""
+每个请求前都会执行这个注册的钩子代码
+"""
+
+from flask import Flask, request
+
+app = Flask(__name__)
+
+
+@app.before_request  # 直接使用装饰器注册
+def before_request_event():
+    if request.path.startswith('/static/'):  # 如果是你的静态文件访问就不继续执行下面代码了
+        return
+
+    print("每个请求前都执行了改代码")
+
+
+@app.route('/')
+def index():
+    print("index")
+    return "index"
+
+
+@app.route('/page')
+def page():
+    print("page")
+    return "page"
+
+
+if __name__ == '__main__':
+    app.run()
+```
+
+### 方案二
+
+使用app实例化对象注册
+
+```python
+"""
+每个请求前都会执行这个注册的钩子代码
+"""
+
+from flask import Flask, request
+
+app = Flask(__name__)
+
+
+def before_request_event():
+    if request.path.startswith('/static/'):  # 如果是你的静态文件访问就不继续执行下面代码了
+        return
+
+    print("每个请求前都执行了改代码")
+
+
+"""注册前置钩子"""
+app.before_request(before_request_event)  # 使用app实例化对象注册
+
+
+@app.route('/')
+def index():
+    print("index")
+    return "index"
+
+
+@app.route('/page')
+def page():
+    print("page")
+    return "page"
+
+
+if __name__ == '__main__':
+    app.run()
+```
+
+## after_request
+
+在每一个请求之后自动调用（视图函数执行之后，响应返回之前），常用于视图访问之后的公告逻辑代码\[结果加工，格式转换，日志记录]
+
+在上面的`before_request`写了两种方案，after_request钩子也可以，但是示例代码只展示一种推荐的
+
+```python
+"""
+每个请求后响应前都会执行这个注册的钩子代码
+"""
+
+from flask import Flask, request
+
+app = Flask(__name__)
+
+
+# 注册钩子
+@app.after_request
+def after_request_event(response):  # 需要接收一个参数
+    """如果before_request钩子return了就不会执行这段代码了，可以不需要写忽略静态文件"""
+    # if request.path.startswith('/static/'):
+    # return
+
+    """获取到的数据都可以再一次处理，添加响应头等行为"""
+    print(response.status_code)  # 获取响应状态码
+    print(response.headers)  # 获取响应头
+    print(response.get_data(as_text=True))  # 获取响应正文,as_text=True是以文本形式展示
+    print("每个请求后响应前都执行了改代码")
+
+    return response  # 需要返回响应给下一个模块处理
+
+
+@app.route('/')
+def index():
+    print("index")
+    return "index"
+
+
+@app.route('/page')
+def page():
+    print("page")
+    return "page"
+
+
+if __name__ == '__main__':
+    app.run()
+```
+
+## teardown_request
+
+论请求是否成功、是否抛异常，都会在请求结束后执行，常被用于做一些“收尾工作”或“清理操作”
+
+常用于 关闭数据库连接，清理线程或资源，记录异常日志，打印请求结束标记，清除全局变量（如 g 对象中的数据）等行为
+
+在上面的`before_request`写了两种方案，after_request钩子也可以，但是示例代码只展示一种推荐的
+
+```python
+"""
+每个请求处理完后无论成功失败都会执行这个注册的钩子代码
+"""
+
+from flask import Flask, request
+
+app = Flask(__name__)
+
+
+# 注册钩子
+@app.teardown_request
+def teardown_request_event(exception):  # 需要接收一个参数，如果成功是None，否则有错误信息
+    print(f'错误日志记录：{exception}')
+
+    # 如果是你的静态文件访问就不继续执行下面代码了
+    if request.path.startswith('/static/'):  # 根据你的情况是否需要处理
+        return
+
+    print("每个请求后响应前都执行了改代码")
+
+
+@app.route('/')
+def index():
+    print("index")
+    return "index"
+
+
+@app.route('/page')
+def page():
+    print("page")
+    return "page"
+
+
+if __name__ == '__main__':
+    app.run()
+```
+
+# 上下文变量
+
+上下文变量都需要在视图/路由上下文的空间里面使用，否则报错
+
+## current_app
+
+current_app 是 Flask 提供的一个上下文变量，用来在任意位置安全地访问当前正在运行的 Flask 应用对象（Flask 实例），即使你不在一个直接能访问 app 的作用域内。
+
+注意：它必须在应用上下文中使用
+
+current_app 是一个上下文变量，如果你在没有请求或没有推送上下文的情况下使用，会报错
+
+应用程序上下文,用于存储flask应用实例对象中的变量，可以通过current_app.name打印当前app的名称，也可以在current_app中存储一些变量，例如：
+
+- 应用的启动脚本是哪个文件，启动时指定了哪些参数
+- 加载了哪些配置文件，导入了哪些配置
+- 连接了哪个数据库
+- 有哪些可以调用的工具类、常量
+- 当前flask应用在哪个机器上，哪个IP上运行，内存多大
+
+简单理解就是公共容器
+
+```python
+from flask import Flask, current_app
+
+app = Flask(__name__)
+
+
+@app.route('/')
+def index():
+    """
+    应用上下文提供了一个容器，使你能够在整个应用程序中共享数据和对象。
+    应用上下文提供给我们使用的变量，也是只能在视图或被试图调用的地方进行使用
+    应用上下文所有的数据来源都是app
+    """
+    print(current_app)  # 应用上下文管理对象
+    print(current_app.config)  # 获取当前项目的所有配置信息
+    print(current_app.url_map)  # 获取当前项目的所有路由信息,<Rule '/static/<filename>路由是flask内部定义的静态文件路由
+
+    return ' '
+
+
+if __name__ == '__main__':
+    app.run()
+```
+
+## g变量
+
+g 作为 flask 程序全局的一个临时变量,充当着中间媒介的作用,我们可以通过它传递一些数据，
+g 保存的是当前请求的全局变量，不同的请求会有不同的全局变量，通过不同的thread id区别
+
+注意：客户端不同的请求，会有不同的全局变量g，或者说，每一个客户端都拥有属于自己的g变量（不会冲突）。
+
+全局数据存储对象，用于保存服务端存储的全局变量数据\[可以理解为用户级别的全局变量存储对象]
+
+```python
+"""
+可以被全局改变的上下文变量g
+不支持g['info']的方式操作，只有点的方式
+"""
+from flask import Flask, g
+
+app = Flask(__name__)
+
+
+def test():
+    g.user = 'BinaryFool'
+
+
+@app.route('/')
+def index():
+    g.user = '小明'
+    print(g.user)
+
+    # 改变值
+    test()
+    print(g.user)
+
+    return ' '
+
+
+if __name__ == '__main__':
+    app.run()
+```
+
+## 创建一个应用上下文环境调用
+
+使用with创建上下文环境，就不需要在视图中单独使用了
+
+如果调试作用输出的内容会在控制台日志顶端
+
+```python
+from flask import Flask, g, current_app
+
+app = Flask(__name__)
+
+with app.app_context():  # 使用with创建上下文环境，就不需要在视图中单独使用了
+    print(current_app)
+    print(g)
 ```

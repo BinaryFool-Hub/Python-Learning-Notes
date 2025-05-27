@@ -182,7 +182,7 @@ def index(number):
     return "hello flask"
 ```
 
-# 数据请求及响应
+# request数据请求及响应
 
 ## 请求
 
@@ -361,7 +361,7 @@ if __name__ == '__main__':
     app.run()
 ```
 
-# 重定向
+# redirect重定向
 
 ```python
 """
@@ -830,3 +830,442 @@ with app.app_context():  # 使用with创建上下文环境，就不需要在视�
     print(current_app)
     print(g)
 ```
+
+# url_for动态生成url
+
+作用是根据视图函数的名字生成对应的 URL 地址，从而避免你在代码中硬编码 URL
+
+假设你的视图函数或路由路径将来改变了，如果你在代码中写死了 URL（比如 /user/profile），那你就得手动修改所有用到这个路径的地方，非常麻烦。
+而使用 url_for 可以自动根据函数名生成 URL，修改路由时只需要改一处即可，维护起来更方便。
+
+```python
+from flask import Flask, url_for
+
+app = Flask(__name__)
+
+
+@app.route('/page/<name>')
+def page_fun(name):
+    return f"{name}的page页面"
+
+
+@app.route('/')
+def index():
+    name = '管理员'
+
+    # 会自动处理返回路由路径，参数一传入视图即可，其他的参数是传入路由需要接收的数据
+    url = url_for('page_fun', name=name)
+    print(url)
+
+    return url
+
+
+if __name__ == '__main__':
+    app.run()
+```
+
+# Jinjia2模板渲染
+
+Jinja2 是一个基于 Python 的模板引擎，它被广泛用于 Web 开发中，Flask内置的模板语言Jinja2，它的设计思想来源于 Django 的模板引擎DTP(DjangoTemplates)，并扩展了其语法和一系列强大的功能，使得在生成动态内容时变得非常方便。
+
+- Flask提供的 **render_template** 函数封装了该模板引擎Jinja2
+- **render_template** 函数的第一个参数是模板的文件名，后面的参数都是键值对，表示模板中变量对应的数据值。
+
+简而言之：操作html模板文件实现数据的传递，还可以操作python传递过来的变量/对象等
+
+## 模板基本使用
+
+需要手动在项目根目录创建`templates`模板文件夹用于存放模板的，
+编辑器是pycharm的需要把文件夹右键标记为模板文件并且选择模板语言为Jinjia2，这样pycharm识别的时候才不会警告，而且还提高了编写代码的效率
+
+使用参数的传递可以把数据变量传递到HTML模板，模板使用`{{}}`占位写入变量名称来接收变量值即可
+
+python传递过来到HTML模板的数据可以像操作python一样操作他们（取值，等）
+
+```html
+{#
+{{}} -> 是占位符
+{#  #\} -> 是模板注释语法，\可以删除，用于转义的
+#}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+
+<h1>{{ content }}</h1>
+
+<h2>数据类型</h2>
+<p>{{ list[-1] }}</p>
+<p>{{ dict }}</p>
+<p>取值数据类型: {{ dict['name'] }}</p>
+<p>取值数据类型: {{ dict.name }}</p> {# 在HTML里面还可以这样使用来取值，python不行 #}
+<p>{{ set }}</p>
+<p>{{ bool }}</p>
+
+</body>
+</html>
+```
+
+```python
+from flask import Flask, render_template
+
+"""
+template_folder:指定模板存放的路径，默认值为templates路径(可以不写)，可以选择自定义的，但是推荐使用默认
+文件夹需要手动创建(项目根目录)，里面存放的是HTML模板文件
+
+static_folder:指定静态文件的路径，默认值是static(可以不写)，可以选择自定义的，但是推荐使用默认
+里面存放css，js，img，……，需要手动创建文件夹(项目根目录)
+"""
+app = Flask(__name__, template_folder='templates', static_folder='static')
+
+
+@app.route('/')
+def index():
+    title = 'index'
+    content = '这是我的第一个flask模板程序'
+    context = {
+        "title": title,
+        "content": content,
+        'list': [1, 2, 'a', 'v'],
+        'dict': {'name': '小明', 'age': 19},
+        'set': {1, 2, 34, 4},
+        'bool': True
+    }
+
+    """
+    这三种写法都可以把数据传递到HTML
+    **locals(): 本地上下文，会把当前函数中的所有局部变量都传进模板，包括你没打算传的临时变量、调试变量、数据库连接对象等，看模板需要哪个挑哪个
+    显示传递：明确只传了需要的变量，控制了变量的数量和命名，安全性高，代码可读性强。
+    **context：限定上下文，只暴露指定的键值对给模板文件，这样代码又不冗长而且美观（推荐的做法👍）
+    
+    最终输出的 HTML 是字符串组成的，所以可以返回任何数据类型。如果需要处理可以进一步在HTML模板中操作他们，这时候他们还不是完全的字符串，
+    还是python的数据类型，可以像操作python一样操作他们（取值，等）
+    """
+    # return render_template('index.html', title=title, content=content)
+    # return render_template('index.html', **locals())
+    return render_template('index.html', **context)
+
+
+if __name__ == '__main__':
+    app.run()
+```
+
+## 模板中自动可用的变量/函数
+
+| 类型   | 名称                                    | 是否自动注入 |
+|------|---------------------------------------|--------|
+| 请求信息 | `request`, `session`, `g`             | ✅ 是    |
+| 路由函数 | `url_for()`, `get_flashed_messages()` | ✅ 是    |
+| 登录信息 | `current_user`（配合 Flask-Login）        | ✅ 是    |
+| 其他全局 | `config`（需要手动注入）                      | ❌ 否    |
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+
+{# 可以看到并没有传入/导入全局变量，但是可以直接操控，因为flask官方注入了 #}
+
+{{ g.__dict__ }}
+{{ session.__dict__ }}
+
+</body>
+</html>
+```
+
+```python
+"""并没有导入和使用session,g，但是就是可以在HTML模板使用，因为官方已经为他们注入了"""
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+if __name__ == '__main__':
+    app.run()
+```
+
+## 模板中的流程控制语句
+
+在HTML模板执行流程控制语句(python语法)需要是`{% %}`来包裹语法,但是一句就一个这个语句标识符，但是需要有结束的代码块({% endif %}等)
+
+### if判断
+
+参数从python后端传入了，这里不再冗长的写python
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+
+传递的值：{{ value }}
+
+<div>
+    {# if判断逻辑，逻辑不成立的就不会渲染标签，成立则会渲染标签 #}
+
+    {% if value < 60 %}
+    <p>不及格</p>
+    {% elif value < 80 %}
+    <p>及格</p>
+    {% elif value < 90 %}
+    <p>优秀</p>
+    {% else %}
+    <p>其他分数</p>
+    {% endif %}
+</div>
+
+</body>
+</html>
+```
+
+### for循环
+
+参数是列表里面嵌套字典（这是例子，你可以传入任何列表里面嵌套的类型）：\[{'name': '小明'},{'name': '小白'}]
+
+for 循环内部自动提供一个叫 loop 的特殊变量，它是一个循环助手对象，包含了当前循环的各种状态信息，相当于python传递过来的字典，直接用取即可
+
+| 属性名              | 类型   | 说明                                |
+|------------------|------|-----------------------------------|
+| `loop.index`     | int  | 当前是第几次循环（从 1 开始）                  |
+| `loop.index0`    | int  | 当前是第几次循环（从 0 开始）                  |
+| `loop.revindex`  | int  | 距离结束还有几次（从 1 开始）                  |
+| `loop.revindex0` | int  | 距离结束还有几次（从 0 开始）                  |
+| `loop.first`     | bool | 是否是第一次循环                          |
+| `loop.last`      | bool | 是否是最后一次循环                         |
+| `loop.length`    | int  | 要循环的总次数                           |
+| `loop.cycle()`   | 函数   | 在多个值之间交替输出（先使用第一个值下一次使用第二个值，依次交替） |
+| `loop.depth`     | int  | 当前嵌套的深度（从 1 开始）                   |
+| `loop.depth0`    | int  | 当前嵌套的深度（从 0 开始）                   |
+| `loop.parent`    | obj  | 外层循环的 `loop`（嵌套循环时用）              |
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+
+传递的值：{{ values }}
+
+<div>
+    {# for循环 #}
+
+    {% for value in values %}
+    <p {{ loop.cycle('data-attr="ss"', 'data-attr="aa') }}> {# 会交替给属性，loop.cycle()方法是交替执行的 #}
+    <span>{{ loop.index }}</span> {# 获取索引，1开始 #}
+    <span>{{ value['name'] }}</span> {# 这是取里面字典的形式，也可以使用.的形式 #}
+    {{ loop }}
+    </p>
+    {% endfor %}
+
+</div>
+
+</body>
+</html>
+```
+
+## 过滤器
+
+需要使用整块进行过滤可以使用`filter`语句：`{% filter upper %} {% endfilter %}`,语句意思为全部大写 --> 列表过滤器提到过
+
+过滤器迭用：会等前面的过滤器运行完成后再进行二次过滤`{{ 'HELLO' | lower | upper}}`,小写后又大写(但是这是徒劳，用来举例)
+
+### 字符串过滤器
+
+flask默认对传入的模板数据字符不会转义，举例：传入标签，展示的是字符串标签，不会进行解析。目的是为了防止注入攻击，比如写了一个scrapy标签进行攻击。
+非必要不建议使用转义
+
+| 过滤器          | 描述                                            | 代码                                    |
+|--------------|-----------------------------------------------|---------------------------------------|
+| **safe**     | 实体字符的转义(默认不转义，全都是字符串的形式，包括标签，使用safe就可以转移)     | `{{ '<h1>hello</h1>'                  | safe}}`                               |
+| lower        | 把字母转成小写                                       | `{{ 'HELLO'                           | lower }}`                                      |
+| upper        | 把字母转成大写                                       | `{{ 'hello'                           | upper }}`                                      |
+| **reverse**  | 序列类型的数据反转，支持字符串、列表、元祖                         | `{{ 'olleh'                           | reverse }}`                                    |
+| format       | 格式化输出                                         | `{{ '%s = %d'                         | format('name',17) }}`<br>`{{ '%s = %d' % ('name', 17) }}` |
+| striptags    | 渲染之前把值中所有的HTML标签都删掉                           | `{{ '<script>alert("hello")</script>' |  striptags }}`<br>如内容中存在大小于号的情况，则不要使用这个过滤器，容易误删内容。<br>`{{ "如果x<y，z>x，那么x和z之间是否相等？" | striptags }}` |
+| **truncate** | 字符串截断<br>truncate(截取长度, 是否强制截取False, 省略符号...) | `{{ 'hello every one'                 | truncate(9)}}`                      |
+
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+
+<p>
+    {#  字母转小写  #}
+    {{ 'HELLO' | lower }}
+</p>
+<p>
+    {#  字母转大写  #}
+    {{ 'hello' |  upper }}
+</p>
+<p>
+    {#  序列数据反转  #}
+    {{ 'hello' |  reverse }}
+</p>
+
+<p>
+    {#  去除开头结尾的标签  #}
+    {{ '<h1>alert("hello")</h1>' |  striptags }}
+    {#  有大于小于号会导致误删  #}
+    {{ "如果x<y，z>x，那么x和z之间是否相等？" | striptags }}
+</p>
+
+<p>
+    {#  字符串截断，传参按字符算，按词为个体，舍弃多余的词汇  #}
+
+    {{ 'hello every one'  | truncate(7) }} <br> {#  截取7位 hello e, 后三位转... 就是hell...  #}
+
+    {{ 'hello every one'  | truncate(9, killwords=True) }} <br>
+    {{ "foo bar baz qux www"| truncate(11) }} <br>
+    {{ "foo bar baz qux www aaa xxx xxx"|truncate(19) }} <br>
+</p>
+
+
+</body>
+</html>
+```
+
+### 列表过滤器
+
+| 过滤器    | 描述               | 代码                |
+|--------|------------------|-------------------|
+| first  | 取序列类型变量的第一个元素    | `{{ [1,2,3,4,5,6] | first }}`  |
+| last   | 取序列类型变量的最后一个元素   | `{{ [1,2,3,4,5,6] | last }}`   |
+| length | 获取序列类型变量的长度      | `{{ [1,2,3,4,5,6] | length }}` |
+| count  | 获取序列类型变量的长度      | `{{ [1,2,3,4,5,6] | count }}`  |
+| sum    | 列表求和，成员只能是数值类型！！ | `{{ [1,2,3,4,5,6] | sum }}`    |
+| sort   | 列表排序             | `{{ [6,2,3,1,5,4] | sort }}`   |
+
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+
+<p>{{ [1,2,3,4,5,6] | first }}</p>
+<p>{{ [1,2,3,4,5,6] | last }}</p>
+<p>{{ [1,2,3,4,5,6] | length }}</p>
+<p>{{ [1,2,3,4,5,6] | count }}</p>
+<p>{{ [1,2,3,4,5,6] | sum }}</p>
+<p>{{ [1,2,3,4,5,6] | sort }}</p>
+<p>{{ [1,2,3,4,5,6] | sort(reverse=True) }}</p>
+
+{#  语句块过滤，对这里面的整块占位符的值过滤  #}
+{% filter upper %}
+    <p>abc</p>
+    <p>{{ ["a","c"] }}</p>
+    <p>{{ ["a","c"] }}</p>
+    <p>{{ ["a","c"] }}</p>
+    <p>{{ ["a","c"] }}</p>
+{% endfilter %}
+
+
+</body>
+</html>
+```
+
+### 自定义过滤器
+
+#### 编写过滤器代码
+
+建议使用单独的文件来,比如`utils/filters.py`来管理
+
+```python
+"""
+自定义过滤器，参数二可选，但是参数一是必须的，不然你怎么处理传入的数据
+"""
+
+
+def add_str(data, string):
+    """
+    用于添加字符串的过滤器
+    :param data: 数据
+    :param string: 添加的字符
+    :return: 结果
+    """
+    return f"{data}{string}"
+
+
+"""过滤器字典，过滤器名称可以自行定义"""
+FILTERS = {
+    'add_str_filter': add_str
+}
+```
+
+#### 注册过滤器
+
+```python
+from flask import Flask
+from utils.filters import FILTERS  # 路径自定义
+
+app = Flask(__name__)
+
+for key, obj in FILTERS.items():
+    app.add_template_filter(obj, key)  # 注意：是反的传递数据
+```
+
+#### 通过装饰器的方法编写和注册过滤器(不推荐)
+
+```python
+from flask import Flask
+
+app = Flask(__name__)
+
+
+@app.template_filter('add_str_filter')  # 传入装饰器自定义名称，下面的就是装饰器执行的具体代码
+def add_str(data, string):
+    """
+    用于添加字符串的过滤器
+    :param data: 数据
+    :param string: 添加的字符
+    :return: 结果
+    """
+    return f"{data}{'11'}"
+```
+
+#### 使用自定义过滤器
+
+普通的如何使用这个就如何使用，如果不需要传递参数可以不打括号，但是可以打括号
+
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+
+{# 自定义过滤器的使用 #}
+<p>{{ 'info' | add_str_filter('字符') }}</p>
+
+
+</body>
+</html>
+```
+

@@ -954,7 +954,7 @@ if __name__ == '__main__':
     app.run()
 ```
 
-## 模板中自动可用的变量/函数
+## 模板中全局的变量/函数
 
 | 类型   | 名称                                    | 是否自动注入 |
 |------|---------------------------------------|--------|
@@ -1269,3 +1269,147 @@ def add_str(data, string):
 </html>
 ```
 
+## 模板继承
+
+在模板中，可能会遇到以下情况：
+
+- 多个模板具有完全相同的顶部和底部内容
+- 多个模板中具有相同的模板代码内容，但是内容中部分值不一样，弹窗
+- 多个模板中具有完全相同的 html 代码块内容，侧边栏
+
+像遇到这种情况，可以使用 JinJa2 模板中的 **模板继承** 来进行实现
+
+模板继承是为了重用模板中的公共内容。一般Web开发中，继承主要使用在网站的顶部菜单、底部、弹窗。这些内容可以定义在父模板中，子模板直接继承，而不需要重复书写。
+
+- block相当于在父模板中挖个坑，当子模板继承父模板时，可以进行对应指定同名区块进行代码填充。
+- 子模板使用 extends 标签声明继承自哪个父模板，一个项目中可以有多个父模板，但每个子模板只能继承一个父模板。
+- 父模板中定义的区块在子模板中被重新定义，在子模板中调用父模板的内容可以使用super()调用父模板声明的区块内容。如果不使用super()则会替换父模板的内容
+
+编程习惯(根据自己喜好)：
+
+- 把公共的HTML代码建立一个目录：templates/common
+- 如果是主要的根基还可以命名为：base.html
+
+### block代码块语法区别
+
+两种方式都可以，如果想要增强阅读感就是用第二个方法，一般情况使用简洁的写法
+
+| 写法                                    | 是否可用 | 是否推荐 | 说明              |
+|---------------------------------------|------|------|-----------------|
+| `{% block name %}{% endblock %}`      | ✅    | ✅    | 简洁，常见写法         |
+| `{% block name %}{% endblock name %}` | ✅    | ✅    | 可读性更强，适合结构复杂的模板 |
+
+### 构建基础架构
+
+不被使用的代码块还是会展示原有的代码及其数据
+
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        header, footer {
+            width: 1200px;
+            height: 200px;
+            background-color: #00acc1;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        main {
+            width: 1200px;
+            min-height: 200px;
+            background-color: #1de9b6;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+
+<h1>BinaryFool小站</h1>
+
+{% block header %}
+    <header>
+        <h1>这是顶部部分</h1>
+    </header>
+{% endblock %}
+
+<main>
+    {% block container %}
+        {# 这是给你编写代码的区域，container是区块名字 #}
+    {% endblock %}
+</main>
+
+{% block footer %}
+    <footer>
+        <h1>这是底部部分</h1>
+    </footer>
+{% endblock %}
+
+</body>
+</html>
+```
+
+### 继承基础架构
+
+这就是一个完整的界面了，因为已经通过extends语法继承了，只需要在代码块编写你的代码即可，继承的代码块位置不作限制，都可以进行顺序渲染
+如果你不想改变原架构的代码块代码，不使用即可。
+如果你继承代码块原来的代码，使用super()即可，位置你可以任意，都是继承父模板中的代码块的代码
+
+```
+{# 使用extends语法后面跟templates下面自己创建的路径即可，需要使用引号引起来，为了不影响阅读，继承代码一般放在开头 #}
+{% extends 'common/base.html' %}
+
+{# 你在构建基础架构的代码块语法怎么写的就在这怎么写就行，里面编写你的代码即可，参数等行为都是一样的 #}
+{% block container %}
+    <p>这是主要代码块</p>
+{% endblock %}
+
+{# 继承并且重写代码块 #}
+{% block header %}
+    {{ super() }}  {# 使用这个函数来进行继承，位置不限 #}
+    <p>新增代码块</p>
+{% endblock %}
+```
+
+## 模板包含
+
+include 语句用于包含一个模板，并在当前命名空间中返回那个文件的内容渲 染结果
+
+模板包含和模板继承有点相似，但是模板包含是把HTML代码拿过来进行拼接，不要有html和head等HTML结构标签，只是把里面的HTML代码拿过来使用而已
+
+### 被include的文件
+
+只需要简单的写HTML代码即可，不需要结构标签，不建议引入css和js标签，因为只是把这段代码放入引入该文件代码的区块地方，仅此而已
+
+```
+<div>
+    <p>这是局域HTML代码</p>
+</div>
+```
+
+### 使用include引入的文件
+
+一个模板文件可以存在多个include
+
+```
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+</head>
+<body>
+
+{# 把里面的HTML拿过来放这里使用 #}
+{% include 'common/sidebar.html' %}
+
+<p>继续编写代码</p>
+
+</body>
+</html>
+```

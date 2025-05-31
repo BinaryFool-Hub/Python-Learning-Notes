@@ -237,6 +237,7 @@ if __name__ == '__main__':
 | **having()**   | 返回分组结果中符合条件的数据，**必须跟在group by后面**，其他地方无法使用。           |
 
 - 查询返回的数据结果是一个模型的对象实例/列表包裹实例，可以通过模型类内部封装方法来实现返回json或者自己封装一个函数来实现，在`query.get()主键查询`提到过
+- 支持链式调用方法，当使用all()等方法返回实际数据后才不支持了
 
 ## query.get()主键查询
 
@@ -288,104 +289,98 @@ if __name__ == '__main__':
     app.run()
 ```
 
-## filter系列查询过滤器(条件限定)
+## filter查询过滤器(条件限定)
 
 过滤器需要结合all(),first()等方法结合使用，因为过滤器生成的是SQL语句
 
-传入多参数就是多参数每个条件都需要满足的数据才会被返回，任何一个不满足都不行
+传入多参数就是多参数每个条件都需要满足的数据才会被返回，任何一个不满足都不行，否则需要使用逻辑运算方法
 
-### filter条件查询
+### filter_by和filter区别
 
-支持各种运算符和查询方法或者模糊查询方法。
+| 特性	    | filter_by()	                          | filter()                                                            |
+|--------|---------------------------------------|---------------------------------------------------------------------|
+| 语法	    | 直接写字段名（name="小明"）                     | 	需写模型类.字段名（Student.age > 18）                                        |
+| 条件类型	  | 仅支持 =	                                | 支持所有 SQL 条件（>, <, LIKE 等）                                           |
+| 多表查询	  | 不支持	                                  | 支持 （需结合 join()）                                                     |
+| 适用场景   | 	简单等值查询                               | 	复杂查询                                                               |
+| 简单语法示例 | Student.query.filter_by(age=19).all() | Student.query.filter(Student.age >= 19, Student.name == '小明').all() |
 
-```python
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
+### 模糊查询
 
-app = Flask(__name__, template_folder="templates")
+包含，开头，结尾
 
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy()
-db.init_app(app)
-
-
-class Student(db.Model):
-    __tablename__ = "tb_student"
-    id = db.Column(db.Integer, primary_key=True, comment="主键")
-    name = db.Column(db.String(15), comment="姓名")
-    age = db.Column(db.Integer, comment='年龄')
-
-    def to_dict(self):
-        """内部封装的方法，方便返回数据"""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "age": self.age
-        }
-
-
-if __name__ == '__main__':
-    with app.app_context():  # 为了方便测试写的，实际开发中可以结合路由
-        """查询数据"""
-        result = Student.query.filter(Student.id >= 1, Student.name.contains("小")).all()  # id大于等于1的，包含`小`字的
-        # result = Student.query.filter(Student.name.startswith("小")).all()  # 以`小`字开头的
-        # result = Student.query.filter(Student.name.endswith("小")).all()  # 以`小`字结尾的
-        print(result)
-
-        """取值数据，返回列表包裹实例"""
-        for item in result:
-            print(item.to_dict())  # 通过内部封装的方法来获取值
-
-    app.run()
+```
+result = Student.query.filter(Student.id >= 1, Student.name.contains("小")).all()  # id大于等于1的，包含`小`字的
+# result = Student.query.filter(Student.name.startswith("小")).all()  # 以`小`字开头的
+# result = Student.query.filter(Student.name.endswith("小")).all()  # 以`小`字结尾的
 ```
 
-### filter_by精确条件查询
+### and_/or_/!/not_/in_/is_/isnot逻辑查询
 
-filter_by 只支持字段的**值是否相等**的情况，对于大于、小于、大于等于、等等其他条件是不支持的。
+and_,or_,not_: 需要导入sqlalchemy里面的运算逻辑方法，因为flask_sqlalchemy本身就是优化了部分语法
 
-字段添加不需要附带模型类
+结合filter过滤器来嵌套逻辑查询即可，都可以互相嵌套使用
 
-```python
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
+#### and_
 
-app = Flask(__name__, template_folder="templates")
+```
+"""and_ 方法等价于在filter里面写多个参数一样的"""
+# result = Student.query.filter(Student.age == 19, Student.name == '小明').all()
+result = Student.query.filter(and_(Student.age == 19, Student.name == '小明')).all()  # and_只是一个标识方法，和传入多个参数一样的效果
+```
 
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy()
-db.init_app(app)
+#### or_
 
+```
+"""or_ 只需要在filter过滤器里面嵌套即可，满足任意一个条件即可。如果还需要结合and运算可以使用and_或者直接在后面or_方法后添加即可"""
+# result = Student.query.filter(or_(Student.age == 19, Student.name == '小明'), Student.id == 1).all()  # 满足age==19 or name =='小明' 并且id==1
+result = Student.query.filter(and_(or_(Student.age == 19, Student.name == '小明'), Student.id == 1)).all()  # 满足age==19 or name =='小明' 并且id==1
+```
 
-class Student(db.Model):
-    __tablename__ = "tb_student"
-    id = db.Column(db.Integer, primary_key=True, comment="主键")
-    name = db.Column(db.String(15), comment="姓名")
-    age = db.Column(db.Integer, comment='年龄')
+#### not_
 
-    def to_dict(self):
-        """内部封装的方法，方便返回数据"""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "age": self.age
-        }
+not_ 相当于取反，直接在你需要取反的数据中加一个not_即可
 
+需要导入not_: from sqlalchemy import or_
 
-if __name__ == '__main__':
-    with app.app_context():  # 为了方便测试写的，实际开发中可以结合路由
-        """查询数据"""
-        # 单条件格式：filter_by(字段=值)
-        # 多条件格式：filter_by(字段=值, 字段=值, 字段=值...)
-        result = Student.query.filter_by(age=19).all()  # 字段添加不需要附带模型类
-        print(result)
+```
+result = Student.query.filter(not_(Student.id != 1)).all()  # not_(id不等于1的全部数据) --> id等于1的全部数据
+```
 
-        """取值数据，返回列表包裹实例"""
-        for item in result:
-            print(item.to_dict())  # 通过内部封装的方法来获取值
+#### !
 
-    app.run()
+直接==变为!=即可
+
+```
+result = Student.query.filter(Student.id != 1).all()  # id不等于1的全部数据
+```
+
+#### in_
+
+in_范围查询,在模型中key直接操作限制即可
+
+```
+result = Student.query.filter(Student.id.in_([1, 3])).all()  # 返回in_([])中枚举的数据
+```
+
+#### is_
+
+is_判断值查询
+
+```
+# 这两句是等效的，只不过推荐使用is_，会python基础的人都会选择is_,因为就是这是orm，会直接转换
+# result = Student.query.filter(Student.age == None).all()
+result = Student.query.filter(Student.age.is_(None)).all()
+```
+
+#### isnot
+
+相当于is_取反的操作
+
+```
+# 这两句是等效的，是不过推荐使用isnot
+# result = Student.query.filter(Student.age != None).all()
+result = Student.query.filter(Student.age.isnot(None)).all()
 ```
 
 ## all()查询所有满足条件的对象
@@ -394,44 +389,9 @@ all()返回查询到的所有对象，返回结果是列表包裹实例对象
 
 结合filter()来实现条件查询
 
-```python
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
-
-app = Flask(__name__, template_folder="templates")
-
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy()
-db.init_app(app)
-
-
-class Student(db.Model):
-    __tablename__ = "tb_student"
-    id = db.Column(db.Integer, primary_key=True, comment="主键")
-    name = db.Column(db.String(15), comment="姓名")
-    age = db.Column(db.Integer, comment='年龄')
-
-    def to_dict(self):
-        """内部封装的方法，方便返回数据"""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "age": self.age
-        }
-
-
-if __name__ == '__main__':
-    with app.app_context():  # 为了方便测试写的，实际开发中可以结合路由
-        """查询数据"""
-        # result = Student.query.all()  # 不限制条件会返回所有数据
-        result = Student.query.filter(Student.id == 1).all()  # 限制条件查询返回所有数据
-
-        """取值数据，返回列表包裹实例"""
-        for item in result:
-            print(item.to_dict())  # 通过内部封装的方法来获取值
-
-    app.run()
+```
+# result = Student.query.all()  # 不限制条件会返回所有数据
+result = Student.query.filter(Student.id == 1).all()  # 限制条件查询返回所有数据
 ```
 
 ## first()查询第一个满足条件的对象
@@ -440,6 +400,60 @@ first()返回查询到的第一个对象【first的结果只有一个模型对�
 
 结合filter()来实现条件限制
 
+```
+# result = Student.query.first()  # 没有条件限制就返回数据表中第一个数据
+result = Student.query.filter(Student.id >= 1).first()  # 限制返回查询到的第一个数据
+```
+
+## count()查询满足条件结果数量
+
+如果不设置过滤条件，则默认统计全表记录的数量
+
+```
+# result = Student.query.count()  # 没有条件限制就返回所有数据的总数
+result = Student.query.filter(Student.id > 1).count()  # 限制返回查询到的数据总数
+```
+
+## order_by排序
+
+```
+"""
+直接在字段后面使用方法即可，如果入两个值则第一个优先排序，如果一样则排序第二个
+desc是倒序，asc是正序(默认的，可以选择不写)
+
+下面两个方法完全等价，只是通过.的方式更倾向与面向对象。方法的方式更倾向于sqlalchemy的语法风格，但是需要导入方法
+"""
+# from sqlalchemy import desc
+# result = Student.query.order_by(desc(Student.id), desc(Student.age)).all()
+result = Student.query.order_by(Student.id.asc(), Student.age.desc()).all()
+```
+
+## limit()/offset() 限制返回的记录数
+
+limit(n)作用：只返回查询结果的前 n 条记录。
+
+offset(n)作用：跳过前 n 条记录，返回后续的记录（通常与 limit() 结合使用，实现分页）。
+
+不推荐使用python的\[1:2]切片来处理，因为使用.all()方法已经返回所有的数据了，会导致数据过于冗长难以处理
+
+```
+"""
+limit()：用于限制返回条数
+offset():用于忽略指定条数前面数据
+"""
+# result = Student.query.limit(2).all()  # 返回前两条数据
+# result = Student.query.offset(3).all()  # 除了前3条数据都返回
+result = Student.query.offset(3).limit(6).all()  # 返回第4条数据开始后取6条
+print(result)
+```
+
+## exists判断是否存在，scalar获取结果
+
+| 方法       | 返回值        | 适用场景             | 性能特点        |
+|----------|------------|------------------|-------------|
+| scalar() | 单字段值       | 获取聚合结果、第一条记录的字段值 | 需执行完整查询     |
+| exists() | True/False | 仅判断是否存在记录（不取数据）  | 数据库优化，找到即停止 |
+
 ```python
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
@@ -470,49 +484,13 @@ class Student(db.Model):
 if __name__ == '__main__':
     with app.app_context():  # 为了方便测试写的，实际开发中可以结合路由
         """查询数据"""
-        # result = Student.query.first()  # 没有条件限制就返回数据表中第一个数据
-        result = Student.query.filter(Student.id >= 1).first()  # 限制返回查询到的第一个数据
-        print(result)
-
-        """取值数据，返回列表包裹实例"""
-        print(result.to_dict())  # 通过内部封装的方法来获取值
-
-    app.run()
-```
-
-## count()查询满足条件结果数量
-
-如果不设置过滤条件，则默认统计全表记录的数量
-
-```python
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
-
-app = Flask(__name__, template_folder="templates")
-
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy()
-db.init_app(app)
-
-
-class Student(db.Model):
-    __tablename__ = "tb_student"
-    id = db.Column(db.Integer, primary_key=True, comment="主键")
-    name = db.Column(db.String(15), comment="姓名")
-    age = db.Column(db.Integer, comment='年龄')
-
-
-if __name__ == '__main__':
-    with app.app_context():  # 为了方便测试写的，实际开发中可以结合路由
-        """查询数据"""
-        # result = Student.query.count()  # 没有条件限制就返回所有数据的总数
-        result = Student.query.filter(Student.id > 1).count()  # 限制返回查询到的数据总数
+        sql = Student.query.filter(Student.id == 1, Student.name == '小红').exists()  # exists判断值是否存在，如果传入多个则两个都必须在同一行才行
+        result = db.session.query(sql).scalar()  # scalar获取结果
         print(result)
 
     app.run()
 ```
 
-## and_/or_/!/not_/in_/is_逻辑查询
+## 聚合查询(类似MySQL的函数方法)
 
-> 待完善笔记
+> 待完成

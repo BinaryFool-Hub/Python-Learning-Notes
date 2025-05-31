@@ -491,6 +491,264 @@ if __name__ == '__main__':
     app.run()
 ```
 
-## 聚合查询(类似MySQL的函数方法)
+## 聚合查询(类似MySQL的函数方法)/分组操作
 
-> 待完成
+需要使用scalar()方法来获取结果
+
+```python
+from sqlalchemy import func
+```
+
+| 函数名        | 说明   |      
+|------------|------|
+| func.count | 统计总数 |      
+| func.avg   | 平均值  |      
+| func.min   | 最小值  |      
+| func.max   | 最大值  |      
+| func.sum   | 求和   |     
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+from sqlalchemy import func
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+
+class Student(db.Model):
+    __tablename__ = "tb_student"
+    id = db.Column(db.Integer, primary_key=True, comment="主键")
+    name = db.Column(db.String(15), comment="姓名")
+    age = db.Column(db.Integer, comment='年龄')
+    sex = db.Column(db.Integer, comment='性别')
+
+
+if __name__ == '__main__':
+    with app.app_context():  # 为了方便测试写的，实际开发中可以结合路由
+        """
+        scalar()用于从查询结果中提取第一行第一列的值，并作为单个值返回
+        """
+
+        """func.sum求和"""
+        data = db.session.query(func.sum(Student.age)).scalar()
+        print("求和：", data)
+
+        """func.count总数"""
+        data = db.session.query(func.count(Student.name)).scalar()
+        print("总数：", data)
+
+        """func.avg平均值"""
+        data = db.session.query(func.avg(Student.age)).scalar()
+        print("平均值：", data)
+
+        """func.max最大值"""
+        data = db.session.query(func.max(Student.age)).scalar()
+        print("最大值：", data)
+
+        """func.min最小值"""
+        data = db.session.query(func.min(Student.age)).scalar()
+        print("最小值：", data)
+
+        """分组操作
+        使用性别分组，年龄来求平均，
+        label是别名，方便遍历后取值，因为聚合返回的字段名不确定，所以使用别名来代替
+        分组的字段可以是多个
+        """
+        data = db.session.query(Student.sex, func.avg(Student.age).label('avg_res')).group_by(Student.sex).all()
+        # 遍历结果, all()已经获取到所有结果了，如果想要更好看和进一步处理遍历即可
+        for item in data:
+            print(item.sex, item.avg_res)
+
+    app.run()
+```
+
+# 数据表数据修改
+
+先查询后修改，使用查询返回的实例对象直接修改即可，然后提交
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+
+class Student(db.Model):
+    __tablename__ = "tb_student"
+    id = db.Column(db.Integer, primary_key=True, comment="主键")
+    name = db.Column(db.String(15), comment="姓名")
+    age = db.Column(db.Integer, comment='年龄')
+    sex = db.Column(db.Integer, comment='性别')
+
+
+if __name__ == '__main__':
+    with app.app_context():  # 为了方便测试写的，实际开发中可以结合路由
+        """修改一条"""
+        result = Student.query.filter(Student.name == '小明').first()  # 先获取返回一个
+        if result:  # 查询到了才修改
+            # 展示原数据
+            print(result.name)
+            # 修改数据
+            result.name = '小白'
+            # 改后需要提交，否则一直在内存
+            db.session.commit()
+
+        """修改多条"""
+        result = Student.query.filter(Student.age < 30).all()  # 返回列表包裹对象
+        if result:  # 查询到了才修改
+            for item in result:
+                item.age = 29
+                item.name = '小明'
+
+            # 修改完成后提交
+            db.session.commit()
+
+        """修改一条和多条方法"""
+        # 会修改查询到的所有信息,返回值为查询且修改了多少条数据
+        row = Student.query.filter(Student.age < 30).update({
+            Student.age: Student.age + 1,
+            Student.name: '小白'
+        })
+        print("修改了：", row)
+        db.session.commit()
+
+    app.run()
+```
+
+# 数据表数据删除
+
+和修改一样的性质，先查询后修改
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+
+class Student(db.Model):
+    __tablename__ = "tb_student"
+    id = db.Column(db.Integer, primary_key=True, comment="主键")
+    name = db.Column(db.String(15), comment="姓名")
+    age = db.Column(db.Integer, comment='年龄')
+    sex = db.Column(db.Integer, comment='性别')
+
+
+if __name__ == '__main__':
+    with app.app_context():  # 为了方便测试写的，实际开发中可以结合路由
+        """删除一条数据"""
+        student_obj = Student.query.filter(Student.id == 1).first()  # 返回一个对象
+        if student_obj:  # 查询到才删除
+            # 删除数据，直接传入对象即可
+            db.session.delete(student_obj)
+            # 删除后提交
+            db.session.commit()
+
+        """删除多条数据"""
+        student_objs = Student.query.filter(Student.id <= 3).all()  # 返回列表包裹对象
+        if student_objs:  # 查询到才删除
+            for obj in student_objs:
+                db.session.delete(obj)  # 删除数据
+            # 删除后提交
+            db.session.commit()
+
+        """一条和多条数据删除，返回值为删除了多少条数据"""
+        row = Student.query.filter(Student.id <= 8).delete()
+        # 提交删除
+        db.session.commit()
+        print(row)
+    app.run()
+```
+
+# Pagination分页器
+
+SQLAlchemy 提供了一个称为 `Pagination`（分页器）的工具，用于处理数据库查询的分页操作。使用分页器，你可以轻松地实现在大数据集中分页浏览数据的功能
+
+简单理解就是把数据进行了分页的返回，相当于limit和offset
+
+结合路由来实现数据的查询返回给前端
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+
+class Student(db.Model):
+    __tablename__ = "tb_student"
+    id = db.Column(db.Integer, primary_key=True, comment="主键")
+    name = db.Column(db.String(15), comment="姓名")
+    age = db.Column(db.Integer, comment='年龄')
+    sex = db.Column(db.Integer, comment='性别')
+
+
+if __name__ == '__main__':
+    with app.app_context():  # 为了方便测试写的，实际开发中可以结合路由
+        """
+        分页器对象 = 模型.query.filter(过滤条件).paginate(page=页码, per_page=单页数据量,max_per_page=最大单页数据量，默认100, error_out=超出报错，默认True)
+        过滤条件可以不写，就是返回全部：模型.query.paginate()
+        
+        max_per_page（最大每页条数）:限制用户可请求的最大 per_page 值，防止恶意请求过大分页（如 per_page=10000 导致性能问题）。
+        max_per_page一般来限制per_page的值，如果per_page大于max_per_page就使用max_per_page的值
+        
+        error_out=False表示出数据超出范围不报错，返回空列表，可以使用来处理对应的操作
+        """
+
+        # 页码和量一般都是接收前端传递的
+        paginate = Student.query.filter(Student.id > 13).paginate(page=4, per_page=2, max_per_page=40, error_out=False)
+        # print(paginate.__dict__)  # 展示对象结构
+        print(paginate.total)  # 全部查询到的数据总数
+        print(paginate.items)  # 当前页展示的数据列表
+        # print(paginate.pages)  # 分页后的总页码，一般都需要返回给前端
+
+        if not paginate.items:
+            print("数据空了")
+
+        # print(paginate.has_prev)  # 是否有上一页
+        # print(paginate.prev_num)  # 上一页的页码
+        # print(paginate.prev())  # 上一页的分页器对象
+        # print(paginate.prev().items)  # 上一页展示的数据列表，和当前分页对象一样的使用即可
+
+        # print(paginate.has_next)  # 是否有下一页
+        # print(paginate.next_num)  # 下一页的页码
+        # print(paginate.next())  # 下一页的分页器对象
+        # print(paginate.next().items)  # 下一页展示的数据列表，和当前分页对象一样的使用即可
+
+    app.run()
+```
+
+# 表数据关联
+
+在 SQLAlchemy 中，关联查询是一种强大的数据库查询技术，用于在不同模型之间建立关联，以便在查询时能够方便地获取相关联的数据。在关联查询中，常见的一些关键字和参数用于配置关联关系，下面是一些常用的参数和它们的描述：
+
+| 选项名       | 说明                                                                                                                                               |
+|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| backref   | 在关系的另一模型中添加**反向引用**，用于设置外键名称,在1查多的                                                                                                               |
+| lazy      | 指定如何加载关联模型数据的方式，用于1对1或1对多链表中。参数值:<br>select（立即加载，查询所有相关数据显示，相当于lazy=True，默认为select）<br>subquery（立即加载，但使用子查询）<br>dynamic（不立即加载，但提供加载记录的查询对象）      |
+| uselist   | 指定1对1或1对多连表时，返回的数据结果是模型对象还是模型列表，如果为False，不使用列表，而使用模型对象。<br>1对1或多对1关系中，需要设置relationship中的uselist=Flase，1对多或多对多关系中，需要设置relationshio中的uselist=True。 |
+| secondary | 指定多对多关系中关系表的名字。<br>多对多关系中，需建立关系表，设置 secondary=关系表                                                                                                |
+
+## 模型之间的关联
+
+> 待完善

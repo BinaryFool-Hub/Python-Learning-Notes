@@ -738,7 +738,7 @@ if __name__ == '__main__':
     app.run()
 ```
 
-# 表数据关联
+# 表数据关联(模型关系)
 
 在 SQLAlchemy 中，关联查询是一种强大的数据库查询技术，用于在不同模型之间建立关联，以便在查询时能够方便地获取相关联的数据。在关联查询中，常见的一些关键字和参数用于配置关联关系，下面是一些常用的参数和它们的描述：
 
@@ -751,4 +751,332 @@ if __name__ == '__main__':
 
 ## 模型之间的关联
 
-> 待完善
+模型之间的联系就是一种概念，通过少量的代码实现多表之间的联系，实现操作一个表同时操作其他表
+
+简单点理解：relationship的属性backref是给子表调用主表的，而relationship的接收变量是给主表调用子表的
+
+**relationship级联属性：**
+
+- `'save-update'`: 当父对象被添加到会话（session）中或更新时，子对象也应该被添加到会话或更新。
+- `'delete'`: 当父对象被删除时，相关的子对象也应该被删除。
+- `'all'`: 包括所有的 `'save-update'` 和 `'delete'` 操作。
+- `'merge'`: 当父对象被合并到会话中时，子对象也应该被合并。
+- `'expunge'`: 当父对象被从会话中移除时，子对象也应该被从会话中移除。
+- `'refresh-expire'`: 当父对象被刷新或过期时，子对象也应该被刷新或过期。
+- `'refresh'`: 当父对象被刷新时，子对象也应该被刷新。
+- `'save-update, merge'`: 同时包括保存更新和合并的级联。
+
+### 一对一关系 (One-to-One)
+
+- 一对一关系表示一个模型的一个实例只关联另一个模型的一个实例。
+- 使用uselist=False表示一对一关系
+- 双向通信的核心思想：
+    - 主模型（如 User）
+        - 可以通过自己的属性（如 .profile）主动获取子模型（Profile）的对象。
+        - 相当于："我是用户，我要查我的资料！"
+    - 子模型（如 Profile）
+        - 通过 backref 自动获得的反向属性（如 .user）反向获取主模型（User）的对象。
+        - 相当于："我是资料，我要知道我的主人是谁！"
+- 谁是主/子模型？
+    - 外键定义在谁那里，谁就是子模型
+    - 定义 relationship 的一方是主模型
+- backref 是通信的桥梁
+    - 它自动在子模型中创建反向属性，无需手动在子模型里写 relationship。
+- 通信是双向的，但不对称
+    - 主模型用 直接关系
+    - 子模型用 backref 生成的反向关系
+
+流程代码：
+
+```
+# 定义模型
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    profile = db.relationship('Profile', backref='user', uselist=False)  # 主模型主动发声
+
+class Profile(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # 子模型默默记录关联ID
+
+# 实际使用时的双向对话
+user = User.query.first()
+profile = user.profile  # 主模型 → 子模型 ("我的资料呢？")
+
+profile = Profile.query.first()
+owner = profile.user    # 子模型 → 主模型 ("我的主人是谁？")
+```
+
+实践代码：
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+
+class Student(db.Model):
+    __tablename__ = "student"
+    id = db.Column(db.Integer, primary_key=True, comment="学号")
+    name = db.Column(db.String(15), comment="姓名")
+    age = db.Column(db.Integer, comment='年龄')
+    sex = db.Column(db.Integer, comment='性别')
+
+    """
+    association变量：关系属性，不会被视为字段在数据库中建立，只是绑定两个模型之间的通讯，给flask调用数据而已，在该模型中使用可以操作子模型
+    Info：关联的模型名称
+    uselist=False：表示一对一关系，默认True
+    backref='obj': 创建反向引用，里面的值被视为子模型调用父模型数据的属性
+    
+    relationship：建立关系
+    """
+    association = db.relationship('Info', uselist=False, backref='father_obj')
+
+
+class Info(db.Model):
+    __tabname__ = 'info'
+    id = db.Column(db.Integer, primary_key=True, comment='主键')
+    address = db.Column(db.String(25), comment='地址')
+
+    """设置外键字段，让两个表有关联
+    ForeignKey里面参照的是表字段，参照字段必须有唯一属性(主键或唯一键)
+    """
+    foreign_key_sid = db.Column(db.Integer, db.ForeignKey('student.id'))
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        """
+        记得创建好数据库表
+        使用方法和基本的模型差不多(增删改查)，只不过可以同时操控有关系的其他模型
+        """
+
+        """父模型操作数据"""
+        # 添加数据
+        data_obj = Student(
+            name='小明',
+            age=19,
+            association=Info(address='地址……')  # 使用该变量可以一并添加子表的数据
+        )
+        db.session.add(data_obj)
+        db.session.commit()
+
+        # 如果添加数据的时候子表没有添加，通过查询后直接再操作对象即可
+        data_obj = Student(name='小白', age=19)  # 没有操作子表的数据
+        db.session.add(data_obj)
+        db.session.commit()  # 先添加了主表的数据
+        # 把对象查询出来
+        find_obj = Student.query.filter(Student.name == '小白', Student.age == 19).first()  # 取第一个数据出来，如果要操作多个使用update等方式更新数据即可
+        find_obj.association = Info(address='小白的地址1')  # 就相当于修改数据了
+        db.session.commit()  # 修改完成数据后记得提交
+
+        """子模型操作数据"""
+        son_mod_obj = Info.query.filter(Info.foreign_key_sid == 3).first()  # 只取一个来示例
+        print(son_mod_obj.father_obj.__dict__)  # 这样就返回了父模型的对象数据了，可以直接操作对象里面的数据，记得提交数据
+
+    app.run()
+```
+
+### 一对多关系 (One-to-Many)
+
+一对多关系表示一个模型的实例可以关联多个另一个模型的实例。
+
+一对多是一个主模型实例关联多个同类型的子模型实例
+
+外键定义在"多"的一方（Book表）
+
+relationship()定义在"一"的一方（Author表）
+
+思维和一对一一样的，把uselist=True即可，但是默认就是True，可以不写。操作对象返回可以是多个了
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+
+class Student(db.Model):
+    __tablename__ = "student"
+    id = db.Column(db.Integer, primary_key=True, comment="学号")
+    name = db.Column(db.String(15), comment="姓名")
+    age = db.Column(db.Integer, comment='年龄')
+    sex = db.Column(db.Integer, comment='性别')
+
+    # 关系键
+    association = db.relationship('Info', uselist=True, backref='father_obj')
+
+
+class Info(db.Model):
+    __tabname__ = 'info'
+    id = db.Column(db.Integer, primary_key=True, comment='主键')
+    address = db.Column(db.String(25), comment='地址')
+
+    # 外键
+    foreign_key_sid = db.Column(db.Integer, db.ForeignKey('student.id'))
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        """添加数据
+        把主表的uselist=True，这里就支持传入列表包裹对象了
+        """
+        obj = Student(name='小黑', association=[
+            Info(address='地址1'),
+            Info(address='地址2'),
+            Info(address='地址3')
+        ])
+        db.session.add(obj)
+        db.session.commit()
+
+        """查询数据
+        """
+        # 主表查询子表
+        obj = Student.query.filter(Student.name == '小黑').first()  # 只查询主表的一条数据返回一个对象
+        print(obj.association)  # 返回名字是小黑的有多少个地址对象
+        # 子表查询主表
+        obj = Info.query.filter(Info.address == '地址1').first()  # 只用一个来示例
+        print(obj.father_obj)  # 返回主表中的数据对象
+
+    app.run()
+```
+
+### 多对多关系 (Many-to-Many)
+
+多对多关系需要中间关联表来实现。
+
+需要创建单独的关联表
+
+使用secondary参数指定关联表
+
+双向关系可以使用backref
+
+多对多关系表示两个模型之间存在复杂的多对多关联。一个典型的场景是学生和课程的关系，一个学生可以选修多门课程，而一门课程也可以被多名学生选修。或者是社交平台的用户之间关系，一个用户可以关注N个用户，N个用户也可以随意关注其他用户
+
+操作逻辑都是一样的，使用面向对象思维就可以很快的理解
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+"""中间表定义
+和普通的不一样定义方式
+两个外键都是主键表示这两个键为一个整体，上下文的数据不能同时重复(1,1不是重复，后续再出现1,1才重复)
+"""
+student_connect_info = db.Table(
+    'student_connect_info',
+    db.Column('student_id', db.Integer, db.ForeignKey('student.id'), primary_key=True, comment='学生信息id外键'),
+    db.Column('course_id', db.Integer, db.ForeignKey('course.id'), primary_key=True, comment='课程信息id外键')
+)
+
+
+class Student(db.Model):
+    __tablename__ = "student"
+    id = db.Column(db.Integer, primary_key=True, comment="学号")
+    name = db.Column(db.String(15), comment="姓名")
+
+    # 在任意一个模型中创建关系即可(Student和Course都可以)，因为都可以互相通讯的，然后使用secondary来指定中间表的实例化名称
+    communication = db.relationship('Course', secondary=student_connect_info, backref='communication')
+
+
+class Course(db.Model):
+    __tablename__ = 'course'
+    id = db.Column(db.Integer, primary_key=True, comment='主键')
+    course_name = db.Column(db.String(25), comment='课程')
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+
+        """因为有中间表，可以很好的操作他们，只需要操作一个你需要的表即可操作另一个表"""
+
+        """添加学生同时添加课程"""
+        obj = Student(name='张三', communication=[
+            Course(course_name='python'),
+            Course(course_name='C'),
+            Course(course_name='java')
+        ])
+        db.session.add(obj)
+        db.session.commit()
+
+        """添加课程同时添加学生"""
+        # 因为双向绑定了属性，所以可以直接使用backref里面的communication
+        obj = Course(course_name='vue', communication=[
+            Student(name='李四'),
+            Student(name='王五'),
+            Student(name='赵六')
+        ])
+        db.session.add(obj)
+        db.session.commit()
+
+        """查询学生同时查询课程"""
+        obj = Student.query.filter(Student.name == '张三').first().communication
+        for item in obj:
+            print(item.__dict__)
+
+        """查询课程同时查询学生"""
+        obj = Course.query.filter(Course.course_name == 'vue').first().communication
+        for item in obj:
+            print(item.__dict__)
+
+        """删除课程的时候同时中间表的映射关系"""
+        # 删除课程
+        obj = Course.query.filter(Course.course_name == 'python').first()
+        db.session.delete(obj)
+        db.session.commit()
+        # 删除学生
+        obj = Student.query.filter(Student.name == '张三').first()
+        db.session.delete(obj)
+        db.session.commit()
+
+        """追加学生学习的课程"""
+        obj = Student.query.filter(Student.name == '王五').first()
+        obj.communication.append(Course(course_name='flask'))  # 直接使用属性追加即可
+        db.session.commit()
+
+        """删除指定学生的指定课程"""
+        obj = Student.query.filter(Student.name == '王五').first()
+        for item in obj.communication:
+            if item.course_name == 'vue':
+                db.session.delete(item)
+        db.session.commit()
+    app.run()
+```
+
+## 关系选项总结
+
+1. `backref`：在关联的另一个模型中自动创建反向引用。例如，`backref='posts'`将在关联的模型中创建一个名为`posts`的属性。
+2. `lazy`：指定关系的加载方式。常用的选项有`'select'`（默认值，延迟加载）、`'joined'`（立即加载，使用JOIN操作）和`'subquery'`（立即加载，使用子查询）。
+3. `cascade`：指定关系操作的级联行为。例如，`'delete'`表示删除主模型时级联删除相关联的子模型。
+4. `primaryjoin`：指定关系的主键连接条件。用于在关联模型之间定义自定义连接条件。
+5. `secondary`：指定多对多关系中的关联表。
+6. `secondaryjoin`：指定多对多关系的第二个连接条件。用于在多对多关系中定义自定义的第二个连接条件。
+7. `uselist`：指定关系是否使用列表来存储结果。默认情况下，关系使用列表，可以通过设置为`False`来使用单个对象。
+
+**多对多关系**：
+
+在多对多关系中，中间表（即关联表）起着重要的作用。这个中间表通常包含两个外键，分别关联到两个相关的表
+
+由于多对多关系涉及到中间表，传递整个对象的列表是为了让 ORM 框架能够正确地在中间表中创建关联。这样可以确保正确的外键关系被建立，以及中间表的数据能够正确地映射到相关的对象
+
+**一对多关系**：
+
+在一对多关系中，通常是外键存在于多的一方。因此，当您将一的一方的实例插入到多的一方时，只需要传递外键值即可，因为这个外键值能够直接关联到多的一方

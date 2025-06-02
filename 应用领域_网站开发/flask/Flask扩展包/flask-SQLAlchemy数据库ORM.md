@@ -1049,7 +1049,7 @@ if __name__ == '__main__':
 
         """追加学生学习的课程"""
         obj = Student.query.filter(Student.name == '王五').first()
-        obj.communication.append(Course(course_name='flask'))  # 直接使用属性追加即可
+        obj.communication.append(Course(course_name='flask'))  # 直接使用属性追加即可，因为是列表，使用面向对象思维就行，不要纠结为什么
         db.session.commit()
 
         """删除指定学生的指定课程"""
@@ -1058,6 +1058,143 @@ if __name__ == '__main__':
             if item.course_name == 'vue':
                 db.session.delete(item)
         db.session.commit()
+    app.run()
+```
+
+## join表连接查询
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+
+class Student(db.Model):
+    __tablename__ = "student"
+    id = db.Column(db.Integer, primary_key=True, comment="学号")
+    name = db.Column(db.String(15), comment="姓名")
+
+    communication = db.relationship('Course', uselist=False, backref='communication')
+
+
+class Course(db.Model):
+    __tablename__ = 'course'
+    id = db.Column(db.Integer, primary_key=True, comment='主键')
+    course_name = db.Column(db.String(25), comment='课程')
+
+    foreign_key_sid = db.Column(db.Integer, db.ForeignKey('student.id'))
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+
+        """
+        使用 `join` 进行多表关联查询（默认 INNER JOIN）：
+        1. 先通过 `Student.query.join(Course)` 将 Student 和 Course 表关联（基于外键关系）
+        2. `filter()` 可以同时使用两个表的字段进行筛选
+        3. 返回的是 `Student` 查询对象，但能访问关联表字段
+        4. 必须调用 `.all()`/`.first()` 等才会真正执行查询
+        """
+        obj = Student.query.join(Course).filter(
+            Course.course_name == 'vue',
+            Student.name == '小黑'
+        )
+        print(obj)  # 输出的是未执行的查询对象（SQL 语句）
+        result = obj.all()  # 执行查询，返回符合条件的 Student 对象列表
+        print(result)
+        for item in result:
+            print(item.communication)  # 输出关联的之表对象
+
+    app.run()
+```
+
+## with_entities指定返回的字段
+
+不止单个表支持返回指定字段，多个表也可以，根据情况而定是否需要返回指定字段
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy()
+db.init_app(app)
+
+
+class Student(db.Model):
+    __tablename__ = "student"
+    id = db.Column(db.Integer, primary_key=True, comment="学号")
+    name = db.Column(db.String(15), comment="姓名")
+    age = db.Column(db.Integer, comment="年龄")
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        """with_entities指定返回指定字段，直接返回的值了，而不是对象"""
+        result = Student.query.with_entities(Student.name, Student.age).filter(Student.name == '小黑').all()
+        print(result)
+
+    app.run()
+```
+
+## options加载策略
+
+joinedload:通过 JOIN 一次性加载主模型（User）和关联模型（Profile）的数据，避免多次查询数据库。
+
+```
+SELECT user.*, profile.* 
+FROM user 
+LEFT OUTER JOIN profile ON user.id = profile.user_id
+```
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+from sqlalchemy.orm import joinedload
+
+app = Flask(__name__, template_folder="templates")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://root:root@127.0.0.1:3306/flaskdemo?charset=utf8mb4"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['SQLALCHEMY_ECHO'] = True
+db = SQLAlchemy()
+db.init_app(app)
+
+
+class Student(db.Model):
+    __tablename__ = "student"
+    id = db.Column(db.Integer, primary_key=True, comment="学号")
+    name = db.Column(db.String(15), comment="姓名")
+    age = db.Column(db.Integer, comment="年龄")
+
+    communication = db.relationship('Course', uselist=False, backref='communication')
+
+
+class Course(db.Model):
+    __tablename__ = 'course'
+    id = db.Column(db.Integer, primary_key=True)
+    course_name = db.Column(db.String(15))
+
+    foreign_key_sid = db.Column(db.Integer, db.ForeignKey('student.id'))
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        # 数据会通过 JOIN 提前加载，而非延迟加载。一次性提出来
+        result = Student.query.options(joinedload(Student.communication)).all()
+        for item in result:
+            print(item.communication.id)  # 可以看见没有额外的sql语句了
+
     app.run()
 ```
 
@@ -1080,3 +1217,7 @@ if __name__ == '__main__':
 **一对多关系**：
 
 在一对多关系中，通常是外键存在于多的一方。因此，当您将一的一方的实例插入到多的一方时，只需要传递外键值即可，因为这个外键值能够直接关联到多的一方
+
+# 数据迁移/字段更改(追加，减少)
+
+使用到了另一个模块，flask-migrate，前往阅读即可

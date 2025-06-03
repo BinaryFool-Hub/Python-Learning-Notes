@@ -34,6 +34,8 @@ pip install flask-mysqldb
 
 设置完成后需要去MySQL中创建数据库并指定charset
 
+在实际开发者可以使用flask-migrate扩展来管理数据库表的版本，增加字段和删除都会有记录，后续管理回滚都比较方便
+
 ```python
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy

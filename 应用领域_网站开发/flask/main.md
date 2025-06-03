@@ -1413,3 +1413,76 @@ include 语句用于包含一个模板，并在当前命名空间中返回那个
 </body>
 </html>
 ```
+
+# 蓝图容器
+
+## 模块化思想
+
+随着flask程序功能越来越多，逻辑也会越来越复杂，所以需要对程序进行模块化的处理
+
+简单来说，Blueprint 是一个存储视图方法/模型代码的容器（目录），这些操作在这个Blueprint 被注册到flask的APP实例对象应用之后就可以被调用，Flask 可以通过Blueprint来组织URL以及处理客户端请求的视图。
+
+Flask使用Blueprint让应用实现**模块化**，在Flask中Blueprint具有如下属性：
+
+- 一个项目可以具有多个Blueprint
+- 可以将一个Blueprint注册到任何一个未使用的URL下比如 “/”、“/users”或者子域名，也就是路由前缀
+- Blueprint目录可以保存单独属于自己的模板目录保存自己的模板文件、静态文件或者其它的通用操作方法
+- 在一个flask项目初始化时，就应该要注册需要使用的Blueprint，否则项目不识别Blueprint蓝图
+
+注意：flask中的Blueprint并不是一个完整的项目应用，它不能独立运行，所以必须要把蓝图blueprint注册到某一个flask项目中才能使用。可以理解为蓝图是一个flask项目的不同的板块，比如给用户中心创建一个蓝图，给后台管理创建一个蓝图。这样方便后期管理维护。
+蓝图和Flask：蓝图具备Flask的一些功能(独立的静态文件和模板文件等)，等于是Flask的儿子，需要通过父亲才能来到这个世界
+
+## 蓝图创建注册步骤
+
+1. 创建一个python软件包(包含__init__.py)
+2. 在__init__.py里面编写蓝图实例化对象
+    ```python
+    # blog/__init__.py
+    # blog：软件包
+    
+    from flask import Blueprint
+    from . import views
+    
+    """构建蓝图实例对象
+    等同于 app = Flask(__name__)，只是这里并非一个独立的flask项目
+    参数一：蓝图名称(通常包名就行)
+    参数二：Flask也要传递的运行文名称的魔法函数
+    参数url_prefix：指定蓝图的根路由(后续访问通过域+它)
+    """
+    blueprint_obj = Blueprint("users", __name__, url_prefix='/blog')
+    
+    """绑定url和视图关系
+    rule：视图规则，url_prefix+它的值进行访问
+    view_func：访问视图需要执行哪一个函数的操作
+    """
+    blueprint_obj.add_url_rule(rule="/", view_func=views.login)  # 访问url_prefix这个根就访问这个视图
+    blueprint_obj.add_url_rule(rule="/register", view_func=views.register)
+    ```
+3. 构建视图
+    ```python
+    # blog/views.py
+    
+    def login():
+        return "登录"
+    
+    
+    def register():
+        return "注册"
+    ```
+4. 注册蓝图
+    ```python
+    from flask import Flask
+    from blog import blueprint_obj
+    
+    app = Flask(__name__)
+    
+    # 注册蓝图
+    app.register_blueprint(blueprint_obj)
+    
+    if __name__ == '__main__':
+        print(app.url_map)  # 可以看到map里面有对应的路由了
+        app.run()
+    ```
+
+> 访问链接就是：域+蓝图根+视图路由
+> 这样可以更好管理和结构化清晰，一个蓝图处理一个主要事件
